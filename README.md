@@ -97,6 +97,21 @@ Benchmarks use [pytest-benchmark](https://pytest-benchmark.readthedocs.io/) with
 data generation and detector construction happen in the `setup` callable and are
 excluded from measurements.
 
+skchange detectors are benchmarked via the [`skchange.new_api`](https://github.com/NorskRegnesentral/skchange/tree/main/skchange/new_api)
+submodule, which provides an sklearn-compatible single-series API:
+
+```python
+from skchange.new_api.detectors import PELT
+from skchange.new_api.interval_scorers import L2Cost
+
+X = ...  # numpy array shape (n_samples, n_features)
+
+det = PELT(cost=L2Cost())
+det.fit(X)
+changepoints = det.predict_changepoints(X)  # np.ndarray of indices
+labels       = det.predict(X)               # dense segment labels (n_samples,)
+```
+
 ```bash
 uv run pytest benchmarks/bench_null_case.py --benchmark-only -v
 ```
