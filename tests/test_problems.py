@@ -1,0 +1,66 @@
+"""Unit tests for benchmark problem definitions."""
+
+from __future__ import annotations
+
+import numpy as np
+
+from change_bench.datasets.null_case import NullDatasetConfig
+from change_bench.problems.base import BenchmarkProblem, make_null_problems
+
+
+class TestBenchmarkProblem:
+    """Basic BenchmarkProblem behaviour."""
+
+    def test_generate_returns_array(self) -> None:
+        prob = BenchmarkProblem(
+            name="test",
+            dataset_config=NullDatasetConfig(n_samples=50),
+        )
+        data = prob.generate(np.random.default_rng(0))
+        assert isinstance(data, np.ndarray)
+        assert data.shape == (50, 1)
+
+    def test_default_no_changepoints(self) -> None:
+        prob = BenchmarkProblem(
+            name="null",
+            dataset_config=NullDatasetConfig(n_samples=50),
+        )
+        assert prob.true_changepoints == []
+
+
+class TestMakeNullProblems:
+    """make_null_problems factory."""
+
+    def test_returns_list_of_problems(self) -> None:
+        problems = make_null_problems(
+            n_samples_list=[100],
+            distributions=["normal"],
+        )
+        assert len(problems) == 1
+        assert isinstance(problems[0], BenchmarkProblem)
+
+    def test_count(self) -> None:
+        problems = make_null_problems(
+            n_samples_list=[100, 500],
+            distributions=["normal", "t", "gamma"],
+        )
+        assert len(problems) == 6  # 2 × 3
+
+    def test_names_are_unique(self) -> None:
+        problems = make_null_problems()
+        names = [p.name for p in problems]
+        assert len(names) == len(set(names))
+
+    def test_all_null_changepoints(self) -> None:
+        problems = make_null_problems(n_samples_list=[200], distributions=["normal"])
+        assert all(p.true_changepoints == [] for p in problems)
+
+    def test_generate_produces_correct_shape(self) -> None:
+        rng = np.random.default_rng(99)
+        problems = make_null_problems(
+            n_samples_list=[300],
+            distributions=["normal"],
+            n_columns=2,
+        )
+        data = problems[0].generate(rng)
+        assert data.shape == (300, 2)
