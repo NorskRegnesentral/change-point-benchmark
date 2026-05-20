@@ -1,0 +1,37 @@
+[project]
+name = "change-bench"
+version = "0.1.0"
+description = "Benchmarking change-point detection algorithms"
+readme = "README.md"
+authors = [
+    { name = "copilot-swe-agent[bot]", email = "198982749+Copilot@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "ruptures>=1.1",
+    "skchange @ git+https://github.com/NorskRegnesentral/skchange.git@main",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-benchmark>=5.0",
+    "ruff>=0.9",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.15,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+src = ["src"]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "benchmarks"]
+addopts = "-v"
