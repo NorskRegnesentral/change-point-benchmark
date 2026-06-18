@@ -46,7 +46,7 @@ BENCHMARK_SEED: int = 42
 class BenchmarkCase:
     """A single benchmark case ready to be run."""
 
-    group: str
+    package: str
     cpd_algorithm: str
     name: str
     n_samples: int
@@ -137,7 +137,7 @@ def _pair_pelt_l2(
 
         cases.append(
             BenchmarkCase(
-                group="skchange",
+                package="skchange",
                 cpd_algorithm=pair_name,
                 name=f"skchange_pelt_l2/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -152,7 +152,7 @@ def _pair_pelt_l2(
 
         cases.append(
             BenchmarkCase(
-                group="ruptures",
+                package="ruptures",
                 cpd_algorithm=pair_name,
                 name=f"ruptures_kernelcpd_linear/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -214,7 +214,7 @@ def _pair_pelt_gaussian(
 
         cases.append(
             BenchmarkCase(
-                group="skchange",
+                package="skchange",
                 cpd_algorithm=pair_name,
                 name=f"skchange_pelt_gaussian/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -229,7 +229,7 @@ def _pair_pelt_gaussian(
 
         cases.append(
             BenchmarkCase(
-                group="ruptures",
+                package="ruptures",
                 cpd_algorithm=pair_name,
                 name=f"ruptures_pelt_normal/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -291,7 +291,7 @@ def _pair_moving_window(
 
         cases.append(
             BenchmarkCase(
-                group="skchange",
+                package="skchange",
                 cpd_algorithm=pair_name,
                 name=f"skchange_moving_window_cusum/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -306,7 +306,7 @@ def _pair_moving_window(
 
         cases.append(
             BenchmarkCase(
-                group="ruptures",
+                package="ruptures",
                 cpd_algorithm=pair_name,
                 name=f"ruptures_window_l2/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -368,7 +368,7 @@ def _pair_binseg(
 
         cases.append(
             BenchmarkCase(
-                group="skchange",
+                package="skchange",
                 cpd_algorithm=pair_name,
                 name=f"skchange_seeded_binseg_cusum/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -383,7 +383,7 @@ def _pair_binseg(
 
         cases.append(
             BenchmarkCase(
-                group="ruptures",
+                package="ruptures",
                 cpd_algorithm=pair_name,
                 name=f"ruptures_binseg_l2/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -453,7 +453,7 @@ def _pair_moving_window_l2(
 
         cases.append(
             BenchmarkCase(
-                group="skchange",
+                package="skchange",
                 cpd_algorithm=pair_name,
                 name=f"skchange_moving_window_l2/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -468,7 +468,7 @@ def _pair_moving_window_l2(
 
         cases.append(
             BenchmarkCase(
-                group="ruptures",
+                package="ruptures",
                 cpd_algorithm=pair_name,
                 name=f"ruptures_window_l2/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -537,7 +537,7 @@ def _pair_moving_window_l1(
 
         cases.append(
             BenchmarkCase(
-                group="skchange",
+                package="skchange",
                 cpd_algorithm=pair_name,
                 name=f"skchange_moving_window_l1/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -552,7 +552,7 @@ def _pair_moving_window_l1(
 
         cases.append(
             BenchmarkCase(
-                group="ruptures",
+                package="ruptures",
                 cpd_algorithm=pair_name,
                 name=f"ruptures_window_l1/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -618,7 +618,7 @@ def _pair_pelt_linear_trend(
 
         cases.append(
             BenchmarkCase(
-                group="skchange",
+                package="skchange",
                 cpd_algorithm=pair_name,
                 name=f"skchange_pelt_linear_trend/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -633,7 +633,7 @@ def _pair_pelt_linear_trend(
 
         cases.append(
             BenchmarkCase(
-                group="ruptures",
+                package="ruptures",
                 cpd_algorithm=pair_name,
                 name=f"ruptures_pelt_clinear/{problem.name}",
                 n_samples=cfg.n_samples,
@@ -664,22 +664,42 @@ BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
 }
 
 
+PAIR_CATEGORIES: dict[str, list[str]] = {
+    "mean_change": [
+        "pelt_l2",
+        "pelt_linear_trend",
+        "moving_window",
+        "moving_window_l2",
+        "moving_window_l1",
+        "binseg",
+    ],
+    "mean_variance": [
+        "pelt_gaussian",
+    ],
+}
+
+
 def collect_cases(
-    groups: list[str] | None = None,
+    packages: list[str] | None = None,
     pairs: list[str] | None = None,
+    categories: list[str] | None = None,
     problem_set: str = "small",
     include_fit: bool = True,
     min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
-    """Collect benchmark cases, optionally filtered by group and/or pair.
+    """Collect benchmark cases, optionally filtered by package, pair, or category.
 
     Parameters
     ----------
-    groups:
-        Filter to only include cases from these groups (``"ruptures"``,
+    packages:
+        Filter to only include cases from these packages (``"ruptures"``,
         ``"skchange"``). ``None`` means both.
     pairs:
         List of comparison-pair names to include. ``None`` means all pairs.
+    categories:
+        Filter pairs by category (``"mean_change"``, ``"mean_variance"``).
+        ``None`` means all categories.  When both *pairs* and *categories*
+        are given, the union is used.
     problem_set:
         ``"small"`` or ``"full"`` problem battery.
     include_fit:
@@ -690,7 +710,26 @@ def collect_cases(
         ``min_size`` in ruptures and ``min_segment_length`` in skchange PELT.
     """
     problems = NULL_PROBLEMS_SMALL if problem_set == "small" else NULL_PROBLEMS_FULL
-    selected_pairs = pairs if pairs else list(BENCHMARK_PAIRS)
+
+    # Resolve which pairs to run
+    selected_pairs: list[str] = []
+    if categories:
+        for cat in categories:
+            if cat not in PAIR_CATEGORIES:
+                raise ValueError(
+                    f"Unknown category {cat!r}. "
+                    f"Available: {sorted(PAIR_CATEGORIES)}"
+                )
+            selected_pairs.extend(PAIR_CATEGORIES[cat])
+    if pairs:
+        selected_pairs.extend(pairs)
+    if not selected_pairs:
+        selected_pairs = list(BENCHMARK_PAIRS)
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    selected_pairs = [
+        p for p in selected_pairs if not (p in seen or seen.add(p))  # type: ignore[func-returns-value]
+    ]
 
     cases: list[BenchmarkCase] = []
     for p in selected_pairs:
@@ -706,8 +745,8 @@ def collect_cases(
             )
         )
 
-    # Optionally filter by group (ruptures / skchange)
-    if groups:
-        cases = [c for c in cases if c.group in groups]
+    # Optionally filter by package (ruptures / skchange)
+    if packages:
+        cases = [c for c in cases if c.package in packages]
 
     return cases

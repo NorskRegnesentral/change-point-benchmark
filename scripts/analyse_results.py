@@ -43,7 +43,7 @@ df = pl.read_parquet(results_path)
 print(f"Loaded {len(df)} rows from {results_path}")
 print(f"Columns: {df.columns}")
 print(f"Algorithm pairs: {df['cpd_algorithm'].unique().sort().to_list()}")
-print(f"Groups: {df['group'].unique().sort().to_list()}")
+print(f"Packages: {df['package'].unique().sort().to_list()}")
 print()
 
 # ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ print()
 # ---------------------------------------------------------------------------
 
 pairs = df["cpd_algorithm"].unique().sort().to_list()
-groups = df["group"].unique().sort().to_list()
+packages = df["package"].unique().sort().to_list()
 
 n_pairs = len(pairs)
 fig = make_subplots(
@@ -64,9 +64,9 @@ fig = make_subplots(
 for col_idx, pair in enumerate(pairs, start=1):
     pair_df = df.filter(pl.col("cpd_algorithm") == pair)
 
-    for group in groups:
-        group_df = (
-            pair_df.filter(pl.col("group") == group)
+    for pkg in packages:
+        pkg_df = (
+            pair_df.filter(pl.col("package") == pkg)
             .group_by("n_samples")
             .agg(
                 pl.col("mean_s").mean().alias("mean"),
@@ -75,9 +75,9 @@ for col_idx, pair in enumerate(pairs, start=1):
             .sort("n_samples")
         )
 
-        n_samples = group_df["n_samples"].to_list()
-        means = group_df["mean"].to_list()
-        stds = group_df["std"].to_list()
+        n_samples = pkg_df["n_samples"].to_list()
+        means = pkg_df["mean"].to_list()
+        stds = pkg_df["std"].to_list()
 
         fig.add_trace(
             go.Scatter(
@@ -85,8 +85,8 @@ for col_idx, pair in enumerate(pairs, start=1):
                 y=means,
                 error_y=dict(type="data", array=stds, visible=True),
                 mode="lines+markers",
-                name=group,
-                legendgroup=group,
+                name=pkg,
+                legendgroup=pkg,
                 showlegend=(col_idx == 1),
             ),
             row=1,
@@ -117,9 +117,9 @@ fig_log = make_subplots(
 for col_idx, pair in enumerate(pairs, start=1):
     pair_df = df.filter(pl.col("cpd_algorithm") == pair)
 
-    for group in groups:
-        group_df = (
-            pair_df.filter(pl.col("group") == group)
+    for pkg in packages:
+        pkg_df = (
+            pair_df.filter(pl.col("package") == pkg)
             .group_by("n_samples")
             .agg(pl.col("mean_s").mean().alias("mean"))
             .sort("n_samples")
@@ -127,11 +127,11 @@ for col_idx, pair in enumerate(pairs, start=1):
 
         fig_log.add_trace(
             go.Scatter(
-                x=group_df["n_samples"].to_list(),
-                y=group_df["mean"].to_list(),
+                x=pkg_df["n_samples"].to_list(),
+                y=pkg_df["mean"].to_list(),
                 mode="lines+markers",
-                name=group,
-                legendgroup=group,
+                name=pkg,
+                legendgroup=pkg,
                 showlegend=(col_idx == 1),
             ),
             row=1,
@@ -159,13 +159,13 @@ for pair in pairs:
     pair_df = df.filter(pl.col("cpd_algorithm") == pair)
 
     sk = (
-        pair_df.filter(pl.col("group") == "skchange")
+        pair_df.filter(pl.col("package") == "skchange")
         .group_by("n_samples")
         .agg(pl.col("mean_s").mean().alias("sk_mean"))
         .sort("n_samples")
     )
     rpt = (
-        pair_df.filter(pl.col("group") == "ruptures")
+        pair_df.filter(pl.col("package") == "ruptures")
         .group_by("n_samples")
         .agg(pl.col("mean_s").mean().alias("rpt_mean"))
         .sort("n_samples")

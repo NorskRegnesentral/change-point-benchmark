@@ -50,7 +50,7 @@ fi
 
 echo "=== Change-Point Benchmark Runner ==="
 echo "Project:  $PROJECT_DIR"
-echo "Results:  ${OUTPUT}"
+# echo "Results:  ${OUTPUT}"
 echo ""
 
 cd "$PROJECT_DIR"

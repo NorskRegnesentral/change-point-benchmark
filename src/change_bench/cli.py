@@ -2,8 +2,8 @@
 
 Usage::
 
-    uv run bench --runs 10 --groups ruptures skchange --output results.parquet
-    uv run bench --runs 5 --groups skchange --problem-set full
+    uv run bench --runs 10 --packages ruptures skchange --output results.parquet
+    uv run bench --runs 5 --packages skchange --problem-set full
     uv run bench --list
 """
 
@@ -15,7 +15,11 @@ from pathlib import Path
 
 import polars as pl
 
-from change_bench.benchmarks.null_case import BENCHMARK_PAIRS, collect_cases
+from change_bench.benchmarks.null_case import (
+    BENCHMARK_PAIRS,
+    PAIR_CATEGORIES,
+    collect_cases,
+)
 from change_bench.runner import run_benchmark
 
 
@@ -32,12 +36,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Number of timed repetitions per benchmark case (default: 5).",
     )
     parser.add_argument(
-        "-g",
-        "--groups",
+        "--packages",
         nargs="+",
         default=None,
         help=(
-            "Filter to specific library groups (ruptures, skchange). "
+            "Filter to specific library packages (ruptures, skchange). "
             "Omit to run both sides of each pair."
         ),
     )
@@ -48,6 +51,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             f"Comparison pairs to run. Available: {sorted(BENCHMARK_PAIRS)}. "
             "Omit to run all pairs."
+        ),
+    )
+    parser.add_argument(
+        "--categories",
+        nargs="+",
+        default=None,
+        help=(
+            f"Filter pairs by category. Available: {sorted(PAIR_CATEGORIES)}. "
+            "Omit to run all categories."
         ),
     )
     parser.add_argument(
@@ -95,8 +107,9 @@ def main(argv: list[str] | None = None) -> None:
     args = _parse_args(argv)
 
     cases = collect_cases(
-        groups=args.groups,
+        packages=args.packages,
         pairs=args.pairs,
+        categories=args.categories,
         problem_set=args.problem_set,
         include_fit=args.include_fit,
         min_segment_length=args.min_segment_length,
@@ -105,7 +118,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.list_cases:
         for case in cases:
             print(
-                f"  [{case.group}] ({case.cpd_algorithm}) {case.name}  "
+                f"  [{case.package}] ({case.cpd_algorithm}) {case.name}  "
                 f"n={case.n_samples} p={case.data_dimension}"
             )
         print(f"\n{len(cases)} benchmark case(s) total.")
@@ -119,11 +132,11 @@ def main(argv: list[str] | None = None) -> None:
     t0 = time.perf_counter()
 
     for i, case in enumerate(cases, 1):
-        label = f"[{case.group}] {case.name}"
+        label = f"[{case.package}] {case.name}"
         print(f"  ({i}/{len(cases)}) {label} ...", end=" ", flush=True)
 
         res = run_benchmark(
-            group=case.group,
+            package=case.package,
             cpd_algorithm=case.cpd_algorithm,
             name=case.name,
             n_samples=case.n_samples,

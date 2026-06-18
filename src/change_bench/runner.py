@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 class BenchmarkResult:
     """Timing results for a single benchmark case."""
 
-    group: str
+    package: str
     cpd_algorithm: str
     name: str
     n_samples: int
@@ -46,7 +46,7 @@ class BenchmarkResult:
 
     def as_dict(self) -> dict:
         return {
-            "group": self.group,
+            "package": self.package,
             "cpd_algorithm": self.cpd_algorithm,
             "name": self.name,
             "n_samples": self.n_samples,
@@ -64,7 +64,7 @@ class BenchmarkResult:
 
 def run_benchmark(
     *,
-    group: str,
+    package: str,
     cpd_algorithm: str,
     name: str,
     n_samples: int,
@@ -80,8 +80,8 @@ def run_benchmark(
 
     Parameters
     ----------
-    group:
-        Logical grouping (e.g. ``"ruptures"`` or ``"skchange"``).
+    package:
+        Library package (e.g. ``"ruptures"`` or ``"skchange"``).
     cpd_algorithm:
         Name of the comparison algorithm pair.
     name:
@@ -105,7 +105,7 @@ def run_benchmark(
         Number of timed repetitions.
     """
     result = BenchmarkResult(
-        group=group,
+        package=package,
         cpd_algorithm=cpd_algorithm,
         name=name,
         n_samples=n_samples,

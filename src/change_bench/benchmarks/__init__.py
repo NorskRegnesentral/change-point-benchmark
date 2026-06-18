@@ -7,12 +7,14 @@ Each module in this subpackage exposes:
 
 from change_bench.benchmarks.null_case import (
     BENCHMARK_PAIRS,
+    PAIR_CATEGORIES,
     BenchmarkCase,
     collect_cases,
 )
 
 __all__ = [
     "BENCHMARK_PAIRS",
+    "PAIR_CATEGORIES",
     "BenchmarkCase",
     "collect_cases",
 ]
