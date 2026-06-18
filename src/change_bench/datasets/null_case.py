@@ -84,7 +84,7 @@ class NullDatasetConfig:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _build_frozen(self) -> sp_stats.rv_frozen:
+    def _build_frozen(self) -> sp_stats.rv_frozen | sp_stats.rv_continuous:
         """Return a frozen scipy distribution based on the current config."""
         dist = self.distribution
 
