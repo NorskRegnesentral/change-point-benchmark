@@ -18,8 +18,11 @@ class BenchmarkResult:
     """Timing results for a single benchmark case."""
 
     group: str
-    pair: str
+    cpd_algorithm: str
     name: str
+    n_samples: int
+    n_changepoints: int
+    data_dimension: int
     n_runs: int
     times: list[float] = field(default_factory=list)
 
@@ -42,8 +45,11 @@ class BenchmarkResult:
     def as_dict(self) -> dict:
         return {
             "group": self.group,
-            "pair": self.pair,
+            "cpd_algorithm": self.cpd_algorithm,
             "name": self.name,
+            "n_samples": self.n_samples,
+            "n_changepoints": self.n_changepoints,
+            "data_dimension": self.data_dimension,
             "n_runs": self.n_runs,
             "mean_s": self.mean,
             "std_s": self.std,
@@ -55,8 +61,11 @@ class BenchmarkResult:
 def run_benchmark(
     *,
     group: str,
-    pair: str,
+    cpd_algorithm: str,
     name: str,
+    n_samples: int,
+    n_changepoints: int,
+    data_dimension: int,
     setup: Callable[[], tuple[tuple, dict]],
     func: Callable,
     n_runs: int,
@@ -67,10 +76,16 @@ def run_benchmark(
     ----------
     group:
         Logical grouping (e.g. ``"ruptures"`` or ``"skchange"``).
-    pair:
-        Name of the comparison pair this case belongs to.
+    cpd_algorithm:
+        Name of the comparison algorithm pair.
     name:
-        Human-readable benchmark name.
+        Human-readable benchmark name (e.g. distribution label).
+    n_samples:
+        Number of samples in the dataset.
+    n_changepoints:
+        Number of true change points in the dataset.
+    data_dimension:
+        Dimensionality of the time series (number of columns).
     setup:
         Callable returning ``(args, kwargs)`` to pass to *func*.
         Called once per run so each iteration gets a fresh setup.
@@ -79,7 +94,15 @@ def run_benchmark(
     n_runs:
         Number of timed repetitions.
     """
-    result = BenchmarkResult(group=group, pair=pair, name=name, n_runs=n_runs)
+    result = BenchmarkResult(
+        group=group,
+        cpd_algorithm=cpd_algorithm,
+        name=name,
+        n_samples=n_samples,
+        n_changepoints=n_changepoints,
+        data_dimension=data_dimension,
+        n_runs=n_runs,
+    )
 
     for _ in range(n_runs):
         args, kwargs = setup()

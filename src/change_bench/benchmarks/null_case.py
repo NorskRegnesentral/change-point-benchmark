@@ -44,8 +44,11 @@ class BenchmarkCase:
     """A single benchmark case ready to be run."""
 
     group: str
-    pair: str
+    cpd_algorithm: str
     name: str
+    n_samples: int
+    n_changepoints: int
+    data_dimension: int
     setup: Callable[[], tuple[tuple, dict]]
     func: Callable
 
@@ -93,6 +96,7 @@ def _pair_pelt_l2(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
+        cfg = problem.dataset_config
 
         # --- skchange side ---
         def make_sk_setup(d=data):
@@ -105,8 +109,11 @@ def _pair_pelt_l2(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
         cases.append(
             BenchmarkCase(
                 group="skchange",
-                pair=pair_name,
-                name=f"pelt_l2/{problem.name}",
+                cpd_algorithm=pair_name,
+                name=f"skchange_pelt_l2/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
                 setup=make_sk_setup(),
                 func=_skchange_run,
             )
@@ -124,8 +131,11 @@ def _pair_pelt_l2(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
         cases.append(
             BenchmarkCase(
                 group="ruptures",
-                pair=pair_name,
-                name=f"kernelcpd_linear/{problem.name}",
+                cpd_algorithm=pair_name,
+                name=f"ruptures_kernelcpd_linear/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
                 setup=make_rpt_setup(),
                 func=lambda algo: algo.predict(pen=10),
             )
@@ -149,6 +159,7 @@ def _pair_pelt_gaussian(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
+        cfg = problem.dataset_config
 
         # --- skchange side ---
         def make_sk_setup(d=data):
@@ -161,8 +172,11 @@ def _pair_pelt_gaussian(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
         cases.append(
             BenchmarkCase(
                 group="skchange",
-                pair=pair_name,
-                name=f"pelt_gaussian/{problem.name}",
+                cpd_algorithm=pair_name,
+                name=f"skchange_pelt_gaussian/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
                 setup=make_sk_setup(),
                 func=_skchange_run,
             )
@@ -180,8 +194,11 @@ def _pair_pelt_gaussian(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
         cases.append(
             BenchmarkCase(
                 group="ruptures",
-                pair=pair_name,
-                name=f"pelt_normal/{problem.name}",
+                cpd_algorithm=pair_name,
+                name=f"ruptures_pelt_normal/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
                 setup=make_rpt_setup(),
                 func=lambda algo: algo.predict(pen=10),
             )
@@ -205,6 +222,7 @@ def _pair_moving_window(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
+        cfg = problem.dataset_config
 
         # --- skchange side ---
         def make_sk_setup(d=data):
@@ -217,8 +235,11 @@ def _pair_moving_window(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
         cases.append(
             BenchmarkCase(
                 group="skchange",
-                pair=pair_name,
-                name=f"moving_window_cusum/{problem.name}",
+                cpd_algorithm=pair_name,
+                name=f"skchange_moving_window_cusum/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
                 setup=make_sk_setup(),
                 func=_skchange_run,
             )
@@ -236,8 +257,11 @@ def _pair_moving_window(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
         cases.append(
             BenchmarkCase(
                 group="ruptures",
-                pair=pair_name,
-                name=f"window_l2/{problem.name}",
+                cpd_algorithm=pair_name,
+                name=f"ruptures_window_l2/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
                 setup=make_rpt_setup(),
                 func=lambda algo: algo.predict(n_bkps=0),
             )
@@ -261,6 +285,7 @@ def _pair_binseg(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
+        cfg = problem.dataset_config
 
         # --- skchange side ---
         def make_sk_setup(d=data):
@@ -273,8 +298,11 @@ def _pair_binseg(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
         cases.append(
             BenchmarkCase(
                 group="skchange",
-                pair=pair_name,
-                name=f"seeded_binseg_cusum/{problem.name}",
+                cpd_algorithm=pair_name,
+                name=f"skchange_seeded_binseg_cusum/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
                 setup=make_sk_setup(),
                 func=_skchange_run,
             )
@@ -292,8 +320,11 @@ def _pair_binseg(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
         cases.append(
             BenchmarkCase(
                 group="ruptures",
-                pair=pair_name,
-                name=f"binseg_l2/{problem.name}",
+                cpd_algorithm=pair_name,
+                name=f"ruptures_binseg_l2/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
                 setup=make_rpt_setup(),
                 func=lambda algo: algo.predict(n_bkps=0),
             )

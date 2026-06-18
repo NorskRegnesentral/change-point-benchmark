@@ -25,13 +25,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Run change-point detection benchmarks and save results to Parquet.",
     )
     parser.add_argument(
-        "-n", "--runs",
+        "-n",
+        "--runs",
         type=int,
         default=5,
         help="Number of timed repetitions per benchmark case (default: 5).",
     )
     parser.add_argument(
-        "-g", "--groups",
+        "-g",
+        "--groups",
         nargs="+",
         default=None,
         help=(
@@ -49,13 +51,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "-p", "--problem-set",
+        "-p",
+        "--problem-set",
         choices=["small", "full"],
         default="small",
         help="Problem battery size (default: small).",
     )
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         type=Path,
         default=Path("benchmark_results.parquet"),
         help="Path for the output Parquet file (default: benchmark_results.parquet).",
@@ -78,13 +82,15 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.list_cases:
         for case in cases:
-            print(f"  [{case.group}] ({case.pair}) {case.name}")
+            print(
+                f"  [{case.group}] ({case.cpd_algorithm}) {case.name}  "
+                f"n={case.n_samples} p={case.data_dimension}"
+            )
         print(f"\n{len(cases)} benchmark case(s) total.")
         return
 
     print(
-        f"Running {len(cases)} benchmark(s), "
-        f"{args.runs} run(s) each → {args.output}\n"
+        f"Running {len(cases)} benchmark(s), {args.runs} run(s) each → {args.output}\n"
     )
 
     results = []
@@ -96,8 +102,11 @@ def main(argv: list[str] | None = None) -> None:
 
         res = run_benchmark(
             group=case.group,
-            pair=case.pair,
+            cpd_algorithm=case.cpd_algorithm,
             name=case.name,
+            n_samples=case.n_samples,
+            n_changepoints=case.n_changepoints,
+            data_dimension=case.data_dimension,
             setup=case.setup,
             func=case.func,
             n_runs=args.runs,
