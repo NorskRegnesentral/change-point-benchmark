@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import time
+import warnings
 from pathlib import Path
 
 import polars as pl
@@ -104,6 +105,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
+    warnings.filterwarnings("ignore")
     args = _parse_args(argv)
 
     cases = collect_cases(

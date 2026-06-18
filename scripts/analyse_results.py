@@ -1,3 +1,4 @@
+# %%
 """Interactive analysis of benchmark results.
 
 Loads a Parquet results file and produces comparison plots of runtime vs
@@ -6,7 +7,7 @@ ruptures).
 
 Usage (standalone)::
 
-    uv run scripts/analyse_results.py results/benchmark_results.parquet
+    uv run scripts/analyse_results.py results/mean_change.parquet
 
 Or interactively in an editor / REPL — just set ``results_path`` below.
 """
@@ -23,19 +24,18 @@ from plotly.subplots import make_subplots
 # ---------------------------------------------------------------------------
 # Configuration — change this path when running interactively
 # ---------------------------------------------------------------------------
+project_dir = Path(__file__).parent.parent
+results_path: Path = project_dir / "results/mean_change.parquet"
 
-results_path: Path = Path("results/benchmark_results.parquet")
-
-# Override from CLI if provided
-if len(sys.argv) > 1:
-    results_path = Path(sys.argv[1])
+# TODO: Ensure all the figures share the same color scheme (for ruptures and skchange),
+# e.g. via plotly templates, and consistent axis labels.
 
 if not results_path.exists():
     print(f"Results file not found: {results_path}")
-    print("Run benchmarks first:  uv run bench -o results/benchmark_results.parquet")
+    print("Run benchmarks first:  uv run bench -o results/mean_change.parquet")
     sys.exit(1)
 
-# ---------------------------------------------------------------------------
+# %% ---------------------------------------------------------------------------
 # Load data
 # ---------------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ print(f"Algorithm pairs: {df['cpd_algorithm'].unique().sort().to_list()}")
 print(f"Packages: {df['package'].unique().sort().to_list()}")
 print()
 
-# ---------------------------------------------------------------------------
+# %% ---------------------------------------------------------------------------
 # Plot: mean runtime vs n_samples for each algorithm pair
 # ---------------------------------------------------------------------------
 
@@ -103,7 +103,7 @@ fig.update_layout(
 )
 fig.show()
 
-# ---------------------------------------------------------------------------
+# %% ---------------------------------------------------------------------------
 # Plot: log-scale version (useful when ruptures is orders of magnitude faster)
 # ---------------------------------------------------------------------------
 
@@ -187,3 +187,5 @@ for pair in pairs:
 print()
 
 fig_log.show()
+
+# %%

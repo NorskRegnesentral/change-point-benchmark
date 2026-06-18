@@ -7,8 +7,9 @@ them in a Parquet file.
 
 from __future__ import annotations
 
+import gc
 import statistics
-import timeit
+import time
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -119,9 +120,13 @@ def run_benchmark(
 
     for _ in range(n_runs):
         args, kwargs = setup()
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            elapsed = timeit.timeit(lambda: func(*args, **kwargs), number=1)
+        gc_was_enabled = gc.isenabled()
+        gc.disable()
+        t0 = time.perf_counter()
+        func(*args, **kwargs)
+        elapsed = time.perf_counter() - t0
+        if gc_was_enabled:
+            gc.enable()
         result.times.append(elapsed)
 
     return result

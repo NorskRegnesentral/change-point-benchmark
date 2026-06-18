@@ -13,6 +13,8 @@ dependencies = [
     "ruptures>=1.1",
     "skchange @ git+https://github.com/NorskRegnesentral/skchange.git@main",
     "polars>=1.41.2",
+    "ipykernel>=7.3.0",
+    "nbformat>=5.10.4",
 ]
 
 [dependency-groups]

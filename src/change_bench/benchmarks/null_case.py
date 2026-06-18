@@ -717,8 +717,7 @@ def collect_cases(
         for cat in categories:
             if cat not in PAIR_CATEGORIES:
                 raise ValueError(
-                    f"Unknown category {cat!r}. "
-                    f"Available: {sorted(PAIR_CATEGORIES)}"
+                    f"Unknown category {cat!r}. Available: {sorted(PAIR_CATEGORIES)}"
                 )
             selected_pairs.extend(PAIR_CATEGORIES[cat])
     if pairs:
@@ -728,7 +727,9 @@ def collect_cases(
     # Deduplicate while preserving order
     seen: set[str] = set()
     selected_pairs = [
-        p for p in selected_pairs if not (p in seen or seen.add(p))  # type: ignore[func-returns-value]
+        p
+        for p in selected_pairs
+        if not (p in seen or seen.add(p))  # type: ignore[func-returns-value]
     ]
 
     cases: list[BenchmarkCase] = []
