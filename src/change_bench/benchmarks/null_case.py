@@ -667,14 +667,14 @@ BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
 PAIR_CATEGORIES: dict[str, list[str]] = {
     "mean_change": [
         "pelt_l2",
-        "pelt_linear_trend",
         "moving_window",
         "moving_window_l2",
         "moving_window_l1",
         "binseg",
     ],
-    "mean_variance": [
+    "needs_min_segment_length": [
         "pelt_gaussian",
+        "pelt_linear_trend",
     ],
 }
 

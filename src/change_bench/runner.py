@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import statistics
 import timeit
+import warnings
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -118,7 +119,9 @@ def run_benchmark(
 
     for _ in range(n_runs):
         args, kwargs = setup()
-        elapsed = timeit.timeit(lambda: func(*args, **kwargs), number=1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            elapsed = timeit.timeit(lambda: func(*args, **kwargs), number=1)
         result.times.append(elapsed)
 
     return result
