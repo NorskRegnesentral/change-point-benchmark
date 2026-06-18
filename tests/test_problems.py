@@ -46,10 +46,10 @@ class TestMakeNullProblems:
         )
         assert len(problems) == 6  # 2 × 3
 
-    def test_names_are_unique(self) -> None:
+    def test_names_are_unique_per_n_samples(self) -> None:
         problems = make_null_problems()
-        names = [p.name for p in problems]
-        assert len(names) == len(set(names))
+        keys = [(p.name, p.dataset_config.n_samples) for p in problems]
+        assert len(keys) == len(set(keys))
 
     def test_all_null_changepoints(self) -> None:
         problems = make_null_problems(n_samples_list=[200], distributions=["normal"])

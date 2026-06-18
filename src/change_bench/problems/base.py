@@ -91,7 +91,7 @@ def make_null_problems(
             dist_label = dist if isinstance(dist, str) else type(dist).__name__
             problems.append(
                 BenchmarkProblem(
-                    name=f"null_{dist_label}_n{n}",
+                    name=f"null_{dist_label}",
                     dataset_config=NullDatasetConfig(
                         n_samples=n,
                         distribution=dist,
