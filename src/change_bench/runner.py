@@ -24,6 +24,7 @@ class BenchmarkResult:
     n_changepoints: int
     data_dimension: int
     include_fit: bool
+    min_segment_length: int
     n_runs: int
     times: list[float] = field(default_factory=list)
 
@@ -52,6 +53,7 @@ class BenchmarkResult:
             "n_changepoints": self.n_changepoints,
             "data_dimension": self.data_dimension,
             "include_fit": self.include_fit,
+            "min_segment_length": self.min_segment_length,
             "n_runs": self.n_runs,
             "mean_s": self.mean,
             "std_s": self.std,
@@ -69,6 +71,7 @@ def run_benchmark(
     n_changepoints: int,
     data_dimension: int,
     include_fit: bool,
+    min_segment_length: int,
     setup: Callable[[], tuple[tuple, dict]],
     func: Callable,
     n_runs: int,
@@ -91,6 +94,8 @@ def run_benchmark(
         Dimensionality of the time series (number of columns).
     include_fit:
         Whether the timed operation includes fitting.
+    min_segment_length:
+        Minimum segment length used by the detector.
     setup:
         Callable returning ``(args, kwargs)`` to pass to *func*.
         Called once per run so each iteration gets a fresh setup.
@@ -107,6 +112,7 @@ def run_benchmark(
         n_changepoints=n_changepoints,
         data_dimension=data_dimension,
         include_fit=include_fit,
+        min_segment_length=min_segment_length,
         n_runs=n_runs,
     )
 

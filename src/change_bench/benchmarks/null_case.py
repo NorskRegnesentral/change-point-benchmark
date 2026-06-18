@@ -30,6 +30,7 @@ from skchange.new_api.interval_scorers import (
     GaussianCost,
     L1Cost,
     L2Cost,
+    LinearTrendCost,
 )
 
 from change_bench.problems.base import BenchmarkProblem, make_null_problems
@@ -52,6 +53,7 @@ class BenchmarkCase:
     n_changepoints: int
     data_dimension: int
     include_fit: bool
+    min_segment_length: int
     setup: Callable[[], tuple[tuple, dict]]
     func: Callable
 
@@ -76,8 +78,6 @@ NULL_PROBLEMS_FULL: list[BenchmarkProblem] = make_null_problems(
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
-
-
 def _skchange_run(det, X):
     """Fit + predict for a skchange detector (the timed operation)."""
     det.fit(X)
@@ -97,7 +97,10 @@ def _skchange_predict_only(det, X):
 
 
 def _pair_pelt_l2(
-    problems: list[BenchmarkProblem], *, include_fit: bool = True
+    problems: list[BenchmarkProblem],
+    *,
+    include_fit: bool = True,
+    min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """PELT with L2/linear-kernel cost — skchange vs ruptures."""
     pair_name = "pelt_l2"
@@ -109,18 +112,18 @@ def _pair_pelt_l2(
         data = problem.generate(rng)
         cfg = problem.dataset_config
 
-        def make_sk_setup(d=data, fit=include_fit):
+        def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                det = SkchangePELT(cost=L2Cost())
+                det = SkchangePELT(cost=L2Cost(), min_segment_length=msl)
                 if not fit:
                     det.fit(d)
                 return (det, d), {}
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit):
+        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                algo = rpt.KernelCPD(kernel="linear", min_size=1, jump=1)
+                algo = rpt.KernelCPD(kernel="linear", min_size=msl, jump=1)
                 if not fit:
                     algo.fit(d)
                 return (algo, d), {}
@@ -141,6 +144,7 @@ def _pair_pelt_l2(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -155,6 +159,7 @@ def _pair_pelt_l2(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -168,10 +173,11 @@ def _pair_pelt_l2(
 #   skchange: PELT(cost=GaussianCost())
 #   ruptures: Pelt(model="normal", min_size=1, jump=1)
 # ---------------------------------------------------------------------------
-
-
 def _pair_pelt_gaussian(
-    problems: list[BenchmarkProblem], *, include_fit: bool = True
+    problems: list[BenchmarkProblem],
+    *,
+    include_fit: bool = True,
+    min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """PELT with Gaussian/normal cost — skchange vs ruptures."""
     pair_name = "pelt_gaussian"
@@ -183,18 +189,18 @@ def _pair_pelt_gaussian(
         data = problem.generate(rng)
         cfg = problem.dataset_config
 
-        def make_sk_setup(d=data, fit=include_fit):
+        def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                det = SkchangePELT(cost=GaussianCost())
+                det = SkchangePELT(cost=GaussianCost(), min_segment_length=msl)
                 if not fit:
                     det.fit(d)
                 return (det, d), {}
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit):
+        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                algo = rpt.Pelt(model="normal", min_size=1, jump=1)
+                algo = rpt.Pelt(model="normal", min_size=msl, jump=1)
                 if not fit:
                     algo.fit(d)
                 return (algo, d), {}
@@ -215,6 +221,7 @@ def _pair_pelt_gaussian(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -229,6 +236,7 @@ def _pair_pelt_gaussian(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -242,10 +250,11 @@ def _pair_pelt_gaussian(
 #   skchange: MovingWindow(change_score=CUSUM())
 #   ruptures: Window(model="l2", min_size=1, jump=1)
 # ---------------------------------------------------------------------------
-
-
 def _pair_moving_window(
-    problems: list[BenchmarkProblem], *, include_fit: bool = True
+    problems: list[BenchmarkProblem],
+    *,
+    include_fit: bool = True,
+    min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """Moving/sliding window with CUSUM/L2 — skchange vs ruptures."""
     pair_name = "moving_window"
@@ -266,9 +275,9 @@ def _pair_moving_window(
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit):
+        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                algo = rpt.Window(model="l2", min_size=1, jump=1)
+                algo = rpt.Window(model="l2", min_size=msl, jump=1)
                 if not fit:
                     algo.fit(d)
                 return (algo, d), {}
@@ -289,6 +298,7 @@ def _pair_moving_window(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -303,6 +313,7 @@ def _pair_moving_window(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -316,10 +327,11 @@ def _pair_moving_window(
 #   skchange: SeededBinarySegmentation(change_score=CUSUM())
 #   ruptures: Binseg(model="l2", min_size=1, jump=1)
 # ---------------------------------------------------------------------------
-
-
 def _pair_binseg(
-    problems: list[BenchmarkProblem], *, include_fit: bool = True
+    problems: list[BenchmarkProblem],
+    *,
+    include_fit: bool = True,
+    min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """Binary segmentation with CUSUM/L2 — skchange vs ruptures."""
     pair_name = "binseg"
@@ -340,9 +352,9 @@ def _pair_binseg(
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit):
+        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                algo = rpt.Binseg(model="l2", min_size=1, jump=1)
+                algo = rpt.Binseg(model="l2", min_size=msl, jump=1)
                 if not fit:
                     algo.fit(d)
                 return (algo, d), {}
@@ -363,6 +375,7 @@ def _pair_binseg(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -377,6 +390,7 @@ def _pair_binseg(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -390,12 +404,14 @@ def _pair_binseg(
 #   skchange: MovingWindow(change_score=CostChangeScore(L2Cost()), bandwidth=BW)
 #   ruptures: Window(model="l2", width=2*BW, min_size=1, jump=1)
 # ---------------------------------------------------------------------------
-
 _MW_BANDWIDTH: int = 50
 
 
 def _pair_moving_window_l2(
-    problems: list[BenchmarkProblem], *, include_fit: bool = True
+    problems: list[BenchmarkProblem],
+    *,
+    include_fit: bool = True,
+    min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """Moving window with L2 cost (fixed bandwidth) — skchange vs ruptures."""
     pair_name = "moving_window_l2"
@@ -419,9 +435,11 @@ def _pair_moving_window_l2(
 
             return setup
 
-        def make_rpt_setup(d=data, width=2 * bw, fit=include_fit):
+        def make_rpt_setup(
+            d=data, width=2 * bw, fit=include_fit, msl=min_segment_length
+        ):
             def setup():
-                algo = rpt.Window(model="l2", width=width, min_size=1, jump=1)
+                algo = rpt.Window(model="l2", width=width, min_size=msl, jump=1)
                 if not fit:
                     algo.fit(d)
                 return (algo, d), {}
@@ -442,6 +460,7 @@ def _pair_moving_window_l2(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -456,6 +475,7 @@ def _pair_moving_window_l2(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -472,7 +492,10 @@ def _pair_moving_window_l2(
 
 
 def _pair_moving_window_l1(
-    problems: list[BenchmarkProblem], *, include_fit: bool = True
+    problems: list[BenchmarkProblem],
+    *,
+    include_fit: bool = True,
+    min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """Moving window with L1 cost (fixed bandwidth) — skchange vs ruptures."""
     pair_name = "moving_window_l1"
@@ -496,9 +519,11 @@ def _pair_moving_window_l1(
 
             return setup
 
-        def make_rpt_setup(d=data, width=2 * bw, fit=include_fit):
+        def make_rpt_setup(
+            d=data, width=2 * bw, fit=include_fit, msl=min_segment_length
+        ):
             def setup():
-                algo = rpt.Window(model="l1", width=width, min_size=1, jump=1)
+                algo = rpt.Window(model="l1", width=width, min_size=msl, jump=1)
                 if not fit:
                     algo.fit(d)
                 return (algo, d), {}
@@ -519,6 +544,7 @@ def _pair_moving_window_l1(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -533,6 +559,88 @@ def _pair_moving_window_l1(
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
+                min_segment_length=min_segment_length,
+                setup=make_rpt_setup(),
+                func=rpt_func,
+            )
+        )
+
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Comparison pair: PELT + Linear Trend cost
+#   skchange: PELT(cost=LinearTrendCost())
+#   ruptures: Pelt(custom_cost=CostCLinear(), min_size=1, jump=1)
+# ---------------------------------------------------------------------------
+
+
+def _pair_pelt_linear_trend(
+    problems: list[BenchmarkProblem],
+    *,
+    include_fit: bool = True,
+    min_segment_length: int = 1,
+) -> list[BenchmarkCase]:
+    """PELT with linear-trend cost — skchange vs ruptures."""
+    pair_name = "pelt_linear_trend"
+    cases: list[BenchmarkCase] = []
+    sk_func = _skchange_run if include_fit else _skchange_predict_only
+
+    for problem in problems:
+        rng = np.random.default_rng(BENCHMARK_SEED)
+        data = problem.generate(rng)
+        cfg = problem.dataset_config
+
+        def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
+            def setup():
+                det = SkchangePELT(cost=LinearTrendCost(), min_segment_length=msl)
+                if not fit:
+                    det.fit(d)
+                return (det, d), {}
+
+            return setup
+
+        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
+            def setup():
+                algo = rpt.Pelt(
+                    custom_cost=rpt.costs.CostCLinear(), min_size=msl, jump=1
+                )
+                if not fit:
+                    algo.fit(d)
+                return (algo, d), {}
+
+            return setup
+
+        def rpt_func(algo, d, _fit=include_fit):
+            if _fit:
+                algo.fit(d)
+            return algo.predict(pen=10)
+
+        cases.append(
+            BenchmarkCase(
+                group="skchange",
+                cpd_algorithm=pair_name,
+                name=f"skchange_pelt_linear_trend/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
+                include_fit=include_fit,
+                min_segment_length=min_segment_length,
+                setup=make_sk_setup(),
+                func=sk_func,
+            )
+        )
+
+        cases.append(
+            BenchmarkCase(
+                group="ruptures",
+                cpd_algorithm=pair_name,
+                name=f"ruptures_pelt_clinear/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
+                include_fit=include_fit,
+                min_segment_length=min_segment_length,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -548,6 +656,7 @@ def _pair_moving_window_l1(
 BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
     "pelt_l2": _pair_pelt_l2,
     "pelt_gaussian": _pair_pelt_gaussian,
+    "pelt_linear_trend": _pair_pelt_linear_trend,
     "moving_window": _pair_moving_window,
     "moving_window_l2": _pair_moving_window_l2,
     "moving_window_l1": _pair_moving_window_l1,
@@ -560,6 +669,7 @@ def collect_cases(
     pairs: list[str] | None = None,
     problem_set: str = "small",
     include_fit: bool = True,
+    min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """Collect benchmark cases, optionally filtered by group and/or pair.
 
@@ -575,6 +685,9 @@ def collect_cases(
     include_fit:
         If ``True`` (default), the timed operation includes both ``fit`` and
         ``predict``.  If ``False``, only ``predict`` is timed.
+    min_segment_length:
+        Minimum segment length for the detector (default: 1).  Maps to
+        ``min_size`` in ruptures and ``min_segment_length`` in skchange PELT.
     """
     problems = NULL_PROBLEMS_SMALL if problem_set == "small" else NULL_PROBLEMS_FULL
     selected_pairs = pairs if pairs else list(BENCHMARK_PAIRS)
@@ -585,7 +698,13 @@ def collect_cases(
             raise ValueError(
                 f"Unknown benchmark pair {p!r}. Available: {sorted(BENCHMARK_PAIRS)}"
             )
-        cases.extend(BENCHMARK_PAIRS[p](problems, include_fit=include_fit))
+        cases.extend(
+            BENCHMARK_PAIRS[p](
+                problems,
+                include_fit=include_fit,
+                min_segment_length=min_segment_length,
+            )
+        )
 
     # Optionally filter by group (ruptures / skchange)
     if groups:

@@ -79,6 +79,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Use --no-include-fit to time only predict."
         ),
     )
+    parser.add_argument(
+        "--min-segment-length",
+        type=int,
+        default=1,
+        help=(
+            "Minimum segment length for the detector (default: 1). "
+            "Maps to min_size in ruptures and min_segment_length in skchange."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -90,6 +99,7 @@ def main(argv: list[str] | None = None) -> None:
         pairs=args.pairs,
         problem_set=args.problem_set,
         include_fit=args.include_fit,
+        min_segment_length=args.min_segment_length,
     )
 
     if args.list_cases:
@@ -120,6 +130,7 @@ def main(argv: list[str] | None = None) -> None:
             n_changepoints=case.n_changepoints,
             data_dimension=case.data_dimension,
             include_fit=case.include_fit,
+            min_segment_length=case.min_segment_length,
             setup=case.setup,
             func=case.func,
             n_runs=args.runs,

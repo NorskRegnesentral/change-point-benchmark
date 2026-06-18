@@ -115,3 +115,6 @@ labels       = det.predict(X)               # dense segment labels (n_samples,)
 ```bash
 uv run pytest benchmarks/bench_null_case.py --benchmark-only -v
 ```
+
+## Ruptures - Skchange comparison pairs
+| ruptures alg & cost | skchange alg & cost |
