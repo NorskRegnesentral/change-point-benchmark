@@ -569,12 +569,13 @@ def _pair_moving_window_l1(
 
 
 # ---------------------------------------------------------------------------
+# NOTE: Not really a fair comparison, we solve for 'best linear trend'
+#       in the segment, whilst ruptures draws a line from the start value
+#       to the end value.
 # Comparison pair: PELT + Linear Trend cost
 #   skchange: PELT(cost=LinearTrendCost())
 #   ruptures: Pelt(custom_cost=CostCLinear(), min_size=1, jump=1)
 # ---------------------------------------------------------------------------
-
-
 def _pair_pelt_linear_trend(
     problems: list[BenchmarkProblem],
     *,
