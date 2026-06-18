@@ -70,6 +70,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="list_cases",
         help="List available benchmark cases and exit.",
     )
+    parser.add_argument(
+        "--include-fit",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Include fit() in the timed operation (default: True). "
+            "Use --no-include-fit to time only predict."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -77,7 +86,10 @@ def main(argv: list[str] | None = None) -> None:
     args = _parse_args(argv)
 
     cases = collect_cases(
-        groups=args.groups, pairs=args.pairs, problem_set=args.problem_set
+        groups=args.groups,
+        pairs=args.pairs,
+        problem_set=args.problem_set,
+        include_fit=args.include_fit,
     )
 
     if args.list_cases:
@@ -107,6 +119,7 @@ def main(argv: list[str] | None = None) -> None:
             n_samples=case.n_samples,
             n_changepoints=case.n_changepoints,
             data_dimension=case.data_dimension,
+            include_fit=case.include_fit,
             setup=case.setup,
             func=case.func,
             n_runs=args.runs,

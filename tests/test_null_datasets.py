@@ -30,13 +30,13 @@ class TestNullDatasetConfigShape:
 
     @pytest.mark.parametrize("n_samples", [10, 100, 500])
     def test_n_samples(self, n_samples: int) -> None:
-        cfg = NullDatasetConfig(n_samples=n_samples)
+        cfg = NullDatasetConfig(n_samples=n_samples, distribution="normal")
         data = cfg.generate(fresh_rng())
         assert data.shape[0] == n_samples
 
     @pytest.mark.parametrize("n_columns", [1, 3, 10])
     def test_n_columns(self, n_columns: int) -> None:
-        cfg = NullDatasetConfig(n_samples=50, n_columns=n_columns)
+        cfg = NullDatasetConfig(n_samples=50, distribution="normal", n_columns=n_columns)
         data = cfg.generate(fresh_rng())
         assert data.shape == (50, n_columns)
 
@@ -113,13 +113,13 @@ class TestReproducibility:
     """Same RNG seed produces identical datasets."""
 
     def test_same_seed_same_data(self) -> None:
-        cfg = NullDatasetConfig(n_samples=100)
+        cfg = NullDatasetConfig(n_samples=100, distribution="normal")
         data1 = cfg.generate(np.random.default_rng(7))
         data2 = cfg.generate(np.random.default_rng(7))
         np.testing.assert_array_equal(data1, data2)
 
     def test_different_seeds_different_data(self) -> None:
-        cfg = NullDatasetConfig(n_samples=100)
+        cfg = NullDatasetConfig(n_samples=100, distribution="normal")
         data1 = cfg.generate(np.random.default_rng(1))
         data2 = cfg.generate(np.random.default_rng(2))
         assert not np.array_equal(data1, data2)

@@ -14,7 +14,7 @@ class TestBenchmarkProblem:
     def test_generate_returns_array(self) -> None:
         prob = BenchmarkProblem(
             name="test",
-            dataset_config=NullDatasetConfig(n_samples=50),
+            dataset_config=NullDatasetConfig(n_samples=50, distribution="normal"),
         )
         data = prob.generate(np.random.default_rng(0))
         assert isinstance(data, np.ndarray)
@@ -23,7 +23,7 @@ class TestBenchmarkProblem:
     def test_default_no_changepoints(self) -> None:
         prob = BenchmarkProblem(
             name="null",
-            dataset_config=NullDatasetConfig(n_samples=50),
+            dataset_config=NullDatasetConfig(n_samples=50, distribution="normal"),
         )
         assert prob.true_changepoints == []
 

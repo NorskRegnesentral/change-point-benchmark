@@ -26,7 +26,9 @@ from skchange.new_api.detectors import (
 )
 from skchange.new_api.interval_scorers import (
     CUSUM,
+    CostChangeScore,
     GaussianCost,
+    L1Cost,
     L2Cost,
 )
 
@@ -49,6 +51,7 @@ class BenchmarkCase:
     n_samples: int
     n_changepoints: int
     data_dimension: int
+    include_fit: bool
     setup: Callable[[], tuple[tuple, dict]]
     func: Callable
 
@@ -81,6 +84,11 @@ def _skchange_run(det, X):
     return det.predict_changepoints(X)
 
 
+def _skchange_predict_only(det, X):
+    """Predict only (fit already done in setup)."""
+    return det.predict_changepoints(X)
+
+
 # ---------------------------------------------------------------------------
 # Comparison pair: PELT + L2 cost
 #   skchange: PELT(cost=L2Cost())
@@ -88,23 +96,41 @@ def _skchange_run(det, X):
 # ---------------------------------------------------------------------------
 
 
-def _pair_pelt_l2(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
+def _pair_pelt_l2(
+    problems: list[BenchmarkProblem], *, include_fit: bool = True
+) -> list[BenchmarkCase]:
     """PELT with L2/linear-kernel cost — skchange vs ruptures."""
     pair_name = "pelt_l2"
     cases: list[BenchmarkCase] = []
+    sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
         cfg = problem.dataset_config
 
-        # --- skchange side ---
-        def make_sk_setup(d=data):
+        def make_sk_setup(d=data, fit=include_fit):
             def setup():
                 det = SkchangePELT(cost=L2Cost())
+                if not fit:
+                    det.fit(d)
                 return (det, d), {}
 
             return setup
+
+        def make_rpt_setup(d=data, fit=include_fit):
+            def setup():
+                algo = rpt.KernelCPD(kernel="linear", min_size=1, jump=1)
+                if not fit:
+                    algo.fit(d)
+                return (algo, d), {}
+
+            return setup
+
+        def rpt_func(algo, d, _fit=include_fit):
+            if _fit:
+                algo.fit(d)
+            return algo.predict(pen=10)
 
         cases.append(
             BenchmarkCase(
@@ -114,19 +140,11 @@ def _pair_pelt_l2(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
+                include_fit=include_fit,
                 setup=make_sk_setup(),
-                func=_skchange_run,
+                func=sk_func,
             )
         )
-
-        # --- ruptures side ---
-        def make_rpt_setup(d=data):
-            def setup():
-                algo = rpt.KernelCPD(kernel="linear", min_size=1, jump=1)
-                algo.fit(d)
-                return (algo,), {}
-
-            return setup
 
         cases.append(
             BenchmarkCase(
@@ -136,8 +154,9 @@ def _pair_pelt_l2(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
+                include_fit=include_fit,
                 setup=make_rpt_setup(),
-                func=lambda algo: algo.predict(pen=10),
+                func=rpt_func,
             )
         )
 
@@ -151,23 +170,41 @@ def _pair_pelt_l2(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
 # ---------------------------------------------------------------------------
 
 
-def _pair_pelt_gaussian(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
+def _pair_pelt_gaussian(
+    problems: list[BenchmarkProblem], *, include_fit: bool = True
+) -> list[BenchmarkCase]:
     """PELT with Gaussian/normal cost — skchange vs ruptures."""
     pair_name = "pelt_gaussian"
     cases: list[BenchmarkCase] = []
+    sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
         cfg = problem.dataset_config
 
-        # --- skchange side ---
-        def make_sk_setup(d=data):
+        def make_sk_setup(d=data, fit=include_fit):
             def setup():
                 det = SkchangePELT(cost=GaussianCost())
+                if not fit:
+                    det.fit(d)
                 return (det, d), {}
 
             return setup
+
+        def make_rpt_setup(d=data, fit=include_fit):
+            def setup():
+                algo = rpt.Pelt(model="normal", min_size=1, jump=1)
+                if not fit:
+                    algo.fit(d)
+                return (algo, d), {}
+
+            return setup
+
+        def rpt_func(algo, d, _fit=include_fit):
+            if _fit:
+                algo.fit(d)
+            return algo.predict(pen=10)
 
         cases.append(
             BenchmarkCase(
@@ -177,19 +214,11 @@ def _pair_pelt_gaussian(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
+                include_fit=include_fit,
                 setup=make_sk_setup(),
-                func=_skchange_run,
+                func=sk_func,
             )
         )
-
-        # --- ruptures side ---
-        def make_rpt_setup(d=data):
-            def setup():
-                algo = rpt.Pelt(model="normal", min_size=1, jump=1)
-                algo.fit(d)
-                return (algo,), {}
-
-            return setup
 
         cases.append(
             BenchmarkCase(
@@ -199,8 +228,9 @@ def _pair_pelt_gaussian(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
+                include_fit=include_fit,
                 setup=make_rpt_setup(),
-                func=lambda algo: algo.predict(pen=10),
+                func=rpt_func,
             )
         )
 
@@ -214,23 +244,41 @@ def _pair_pelt_gaussian(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
 # ---------------------------------------------------------------------------
 
 
-def _pair_moving_window(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
+def _pair_moving_window(
+    problems: list[BenchmarkProblem], *, include_fit: bool = True
+) -> list[BenchmarkCase]:
     """Moving/sliding window with CUSUM/L2 — skchange vs ruptures."""
     pair_name = "moving_window"
     cases: list[BenchmarkCase] = []
+    sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
         cfg = problem.dataset_config
 
-        # --- skchange side ---
-        def make_sk_setup(d=data):
+        def make_sk_setup(d=data, fit=include_fit):
             def setup():
                 det = MovingWindow(change_score=CUSUM())
+                if not fit:
+                    det.fit(d)
                 return (det, d), {}
 
             return setup
+
+        def make_rpt_setup(d=data, fit=include_fit):
+            def setup():
+                algo = rpt.Window(model="l2", min_size=1, jump=1)
+                if not fit:
+                    algo.fit(d)
+                return (algo, d), {}
+
+            return setup
+
+        def rpt_func(algo, d, _fit=include_fit):
+            if _fit:
+                algo.fit(d)
+            return algo.predict(n_bkps=0)
 
         cases.append(
             BenchmarkCase(
@@ -240,19 +288,11 @@ def _pair_moving_window(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
+                include_fit=include_fit,
                 setup=make_sk_setup(),
-                func=_skchange_run,
+                func=sk_func,
             )
         )
-
-        # --- ruptures side ---
-        def make_rpt_setup(d=data):
-            def setup():
-                algo = rpt.Window(model="l2", min_size=1, jump=1)
-                algo.fit(d)
-                return (algo,), {}
-
-            return setup
 
         cases.append(
             BenchmarkCase(
@@ -262,8 +302,9 @@ def _pair_moving_window(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
+                include_fit=include_fit,
                 setup=make_rpt_setup(),
-                func=lambda algo: algo.predict(n_bkps=0),
+                func=rpt_func,
             )
         )
 
@@ -277,23 +318,41 @@ def _pair_moving_window(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]
 # ---------------------------------------------------------------------------
 
 
-def _pair_binseg(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
+def _pair_binseg(
+    problems: list[BenchmarkProblem], *, include_fit: bool = True
+) -> list[BenchmarkCase]:
     """Binary segmentation with CUSUM/L2 — skchange vs ruptures."""
     pair_name = "binseg"
     cases: list[BenchmarkCase] = []
+    sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
         cfg = problem.dataset_config
 
-        # --- skchange side ---
-        def make_sk_setup(d=data):
+        def make_sk_setup(d=data, fit=include_fit):
             def setup():
                 det = SeededBinarySegmentation(change_score=CUSUM())
+                if not fit:
+                    det.fit(d)
                 return (det, d), {}
 
             return setup
+
+        def make_rpt_setup(d=data, fit=include_fit):
+            def setup():
+                algo = rpt.Binseg(model="l2", min_size=1, jump=1)
+                if not fit:
+                    algo.fit(d)
+                return (algo, d), {}
+
+            return setup
+
+        def rpt_func(algo, d, _fit=include_fit):
+            if _fit:
+                algo.fit(d)
+            return algo.predict(n_bkps=0)
 
         cases.append(
             BenchmarkCase(
@@ -303,19 +362,11 @@ def _pair_binseg(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
+                include_fit=include_fit,
                 setup=make_sk_setup(),
-                func=_skchange_run,
+                func=sk_func,
             )
         )
-
-        # --- ruptures side ---
-        def make_rpt_setup(d=data):
-            def setup():
-                algo = rpt.Binseg(model="l2", min_size=1, jump=1)
-                algo.fit(d)
-                return (algo,), {}
-
-            return setup
 
         cases.append(
             BenchmarkCase(
@@ -325,8 +376,165 @@ def _pair_binseg(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
+                include_fit=include_fit,
                 setup=make_rpt_setup(),
-                func=lambda algo: algo.predict(n_bkps=0),
+                func=rpt_func,
+            )
+        )
+
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Comparison pair: MovingWindow + L2 cost (explicit bandwidth)
+#   skchange: MovingWindow(change_score=CostChangeScore(L2Cost()), bandwidth=BW)
+#   ruptures: Window(model="l2", width=2*BW, min_size=1, jump=1)
+# ---------------------------------------------------------------------------
+
+_MW_BANDWIDTH: int = 50
+
+
+def _pair_moving_window_l2(
+    problems: list[BenchmarkProblem], *, include_fit: bool = True
+) -> list[BenchmarkCase]:
+    """Moving window with L2 cost (fixed bandwidth) — skchange vs ruptures."""
+    pair_name = "moving_window_l2"
+    bw = _MW_BANDWIDTH
+    cases: list[BenchmarkCase] = []
+    sk_func = _skchange_run if include_fit else _skchange_predict_only
+
+    for problem in problems:
+        rng = np.random.default_rng(BENCHMARK_SEED)
+        data = problem.generate(rng)
+        cfg = problem.dataset_config
+
+        def make_sk_setup(d=data, bandwidth=bw, fit=include_fit):
+            def setup():
+                det = MovingWindow(
+                    change_score=CostChangeScore(L2Cost()), bandwidth=bandwidth
+                )
+                if not fit:
+                    det.fit(d)
+                return (det, d), {}
+
+            return setup
+
+        def make_rpt_setup(d=data, width=2 * bw, fit=include_fit):
+            def setup():
+                algo = rpt.Window(model="l2", width=width, min_size=1, jump=1)
+                if not fit:
+                    algo.fit(d)
+                return (algo, d), {}
+
+            return setup
+
+        def rpt_func(algo, d, _fit=include_fit):
+            if _fit:
+                algo.fit(d)
+            return algo.predict(n_bkps=0)
+
+        cases.append(
+            BenchmarkCase(
+                group="skchange",
+                cpd_algorithm=pair_name,
+                name=f"skchange_moving_window_l2/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
+                include_fit=include_fit,
+                setup=make_sk_setup(),
+                func=sk_func,
+            )
+        )
+
+        cases.append(
+            BenchmarkCase(
+                group="ruptures",
+                cpd_algorithm=pair_name,
+                name=f"ruptures_window_l2/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
+                include_fit=include_fit,
+                setup=make_rpt_setup(),
+                func=rpt_func,
+            )
+        )
+
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Comparison pair: MovingWindow + L1 cost (explicit bandwidth)
+#   skchange: MovingWindow(change_score=CostChangeScore(L1Cost()), bandwidth=BW)
+#   ruptures: Window(model="l1", width=2*BW, min_size=1, jump=1)
+# ---------------------------------------------------------------------------
+
+
+def _pair_moving_window_l1(
+    problems: list[BenchmarkProblem], *, include_fit: bool = True
+) -> list[BenchmarkCase]:
+    """Moving window with L1 cost (fixed bandwidth) — skchange vs ruptures."""
+    pair_name = "moving_window_l1"
+    bw = _MW_BANDWIDTH
+    cases: list[BenchmarkCase] = []
+    sk_func = _skchange_run if include_fit else _skchange_predict_only
+
+    for problem in problems:
+        rng = np.random.default_rng(BENCHMARK_SEED)
+        data = problem.generate(rng)
+        cfg = problem.dataset_config
+
+        def make_sk_setup(d=data, bandwidth=bw, fit=include_fit):
+            def setup():
+                det = MovingWindow(
+                    change_score=CostChangeScore(L1Cost()), bandwidth=bandwidth
+                )
+                if not fit:
+                    det.fit(d)
+                return (det, d), {}
+
+            return setup
+
+        def make_rpt_setup(d=data, width=2 * bw, fit=include_fit):
+            def setup():
+                algo = rpt.Window(model="l1", width=width, min_size=1, jump=1)
+                if not fit:
+                    algo.fit(d)
+                return (algo, d), {}
+
+            return setup
+
+        def rpt_func(algo, d, _fit=include_fit):
+            if _fit:
+                algo.fit(d)
+            return algo.predict(n_bkps=0)
+
+        cases.append(
+            BenchmarkCase(
+                group="skchange",
+                cpd_algorithm=pair_name,
+                name=f"skchange_moving_window_l1/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
+                include_fit=include_fit,
+                setup=make_sk_setup(),
+                func=sk_func,
+            )
+        )
+
+        cases.append(
+            BenchmarkCase(
+                group="ruptures",
+                cpd_algorithm=pair_name,
+                name=f"ruptures_window_l1/{problem.name}",
+                n_samples=cfg.n_samples,
+                n_changepoints=len(problem.true_changepoints),
+                data_dimension=cfg.n_columns,
+                include_fit=include_fit,
+                setup=make_rpt_setup(),
+                func=rpt_func,
             )
         )
 
@@ -337,10 +545,12 @@ def _pair_binseg(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
 # Registry: maps pair name -> factory function
 # ---------------------------------------------------------------------------
 
-BENCHMARK_PAIRS: dict[str, Callable[[list[BenchmarkProblem]], list[BenchmarkCase]]] = {
+BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
     "pelt_l2": _pair_pelt_l2,
     "pelt_gaussian": _pair_pelt_gaussian,
     "moving_window": _pair_moving_window,
+    "moving_window_l2": _pair_moving_window_l2,
+    "moving_window_l1": _pair_moving_window_l1,
     "binseg": _pair_binseg,
 }
 
@@ -349,6 +559,7 @@ def collect_cases(
     groups: list[str] | None = None,
     pairs: list[str] | None = None,
     problem_set: str = "small",
+    include_fit: bool = True,
 ) -> list[BenchmarkCase]:
     """Collect benchmark cases, optionally filtered by group and/or pair.
 
@@ -361,6 +572,9 @@ def collect_cases(
         List of comparison-pair names to include. ``None`` means all pairs.
     problem_set:
         ``"small"`` or ``"full"`` problem battery.
+    include_fit:
+        If ``True`` (default), the timed operation includes both ``fit`` and
+        ``predict``.  If ``False``, only ``predict`` is timed.
     """
     problems = NULL_PROBLEMS_SMALL if problem_set == "small" else NULL_PROBLEMS_FULL
     selected_pairs = pairs if pairs else list(BENCHMARK_PAIRS)
@@ -371,7 +585,7 @@ def collect_cases(
             raise ValueError(
                 f"Unknown benchmark pair {p!r}. Available: {sorted(BENCHMARK_PAIRS)}"
             )
-        cases.extend(BENCHMARK_PAIRS[p](problems))
+        cases.extend(BENCHMARK_PAIRS[p](problems, include_fit=include_fit))
 
     # Optionally filter by group (ruptures / skchange)
     if groups:
