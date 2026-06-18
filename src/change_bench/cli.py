@@ -15,7 +15,7 @@ from pathlib import Path
 
 import polars as pl
 
-from change_bench.benchmarks.null_case import BENCHMARK_GROUPS, collect_cases
+from change_bench.benchmarks.null_case import BENCHMARK_PAIRS, collect_cases
 from change_bench.runner import run_benchmark
 
 
@@ -35,8 +35,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         nargs="+",
         default=None,
         help=(
-            f"Benchmark groups to run. Available: {sorted(BENCHMARK_GROUPS)}. "
-            "Omit to run all."
+            "Filter to specific library groups (ruptures, skchange). "
+            "Omit to run both sides of each pair."
+        ),
+    )
+    parser.add_argument(
+        "--pairs",
+        nargs="+",
+        default=None,
+        help=(
+            f"Comparison pairs to run. Available: {sorted(BENCHMARK_PAIRS)}. "
+            "Omit to run all pairs."
         ),
     )
     parser.add_argument(
@@ -63,11 +72,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> None:
     args = _parse_args(argv)
 
-    cases = collect_cases(groups=args.groups, problem_set=args.problem_set)
+    cases = collect_cases(
+        groups=args.groups, pairs=args.pairs, problem_set=args.problem_set
+    )
 
     if args.list_cases:
         for case in cases:
-            print(f"  [{case.group}] {case.name}")
+            print(f"  [{case.group}] ({case.pair}) {case.name}")
         print(f"\n{len(cases)} benchmark case(s) total.")
         return
 
@@ -85,6 +96,7 @@ def main(argv: list[str] | None = None) -> None:
 
         res = run_benchmark(
             group=case.group,
+            pair=case.pair,
             name=case.name,
             setup=case.setup,
             func=case.func,

@@ -18,6 +18,7 @@ class BenchmarkResult:
     """Timing results for a single benchmark case."""
 
     group: str
+    pair: str
     name: str
     n_runs: int
     times: list[float] = field(default_factory=list)
@@ -41,6 +42,7 @@ class BenchmarkResult:
     def as_dict(self) -> dict:
         return {
             "group": self.group,
+            "pair": self.pair,
             "name": self.name,
             "n_runs": self.n_runs,
             "mean_s": self.mean,
@@ -53,6 +55,7 @@ class BenchmarkResult:
 def run_benchmark(
     *,
     group: str,
+    pair: str,
     name: str,
     setup: Callable[[], tuple[tuple, dict]],
     func: Callable,
@@ -64,6 +67,8 @@ def run_benchmark(
     ----------
     group:
         Logical grouping (e.g. ``"ruptures"`` or ``"skchange"``).
+    pair:
+        Name of the comparison pair this case belongs to.
     name:
         Human-readable benchmark name.
     setup:
@@ -74,7 +79,7 @@ def run_benchmark(
     n_runs:
         Number of timed repetitions.
     """
-    result = BenchmarkResult(group=group, name=name, n_runs=n_runs)
+    result = BenchmarkResult(group=group, pair=pair, name=name, n_runs=n_runs)
 
     for _ in range(n_runs):
         args, kwargs = setup()

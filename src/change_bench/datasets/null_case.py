@@ -17,7 +17,7 @@ from scipy import stats as sp_stats
 # ---------------------------------------------------------------------------
 
 #: Mapping from friendly distribution names to their ``scipy.stats`` classes.
-NAMED_DISTRIBUTIONS: dict[str, type[sp_stats.rv_continuous]] = {
+NAMED_DISTRIBUTIONS: dict[str, sp_stats.rv_continuous] = {
     "normal": sp_stats.norm,
     "t": sp_stats.t,
     "gamma": sp_stats.gamma,
@@ -72,13 +72,15 @@ class NullDatasetConfig:
     """
 
     n_samples: int
-    distribution: DistributionLike = "normal"
+    distribution: DistributionLike
     scale: float = 1.0
     df: float = 5.0
     shape: float = 2.0
     n_columns: int = 1
     # internal: cached frozen distribution (not part of the public config)
-    _frozen: object = field(default=None, init=False, repr=False, compare=False)
+    _frozen: sp_stats.rv_frozen | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
 
     # ------------------------------------------------------------------
     # Helpers

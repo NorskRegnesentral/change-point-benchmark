@@ -2,10 +2,12 @@
 
 Run via the CLI::
 
-    uv run bench --groups ruptures skchange --runs 10 -o results.parquet
+    uv run bench --runs 10 -o results.parquet
+    uv run bench --runs 10 --pairs pelt_l2 moving_window -o results.parquet
 
-Each factory function builds a list of :class:`BenchmarkCase` objects.
-The CLI runner discovers and executes them using ``timeit``.
+Benchmarks are organised as **comparison pairs**: each pair contains one
+skchange detector and its equivalent ruptures detector so that timing
+differences are directly attributable to the implementation.
 """
 
 from __future__ import annotations
@@ -16,12 +18,11 @@ from dataclasses import dataclass
 import numpy as np
 import ruptures as rpt
 from skchange.new_api.detectors import (
-    CROPS,
-    MovingWindow,
-    SeededBinarySegmentation,
+    PELT as SkchangePELT,
 )
 from skchange.new_api.detectors import (
-    PELT as SkchangePELT,
+    MovingWindow,
+    SeededBinarySegmentation,
 )
 from skchange.new_api.interval_scorers import (
     CUSUM,
@@ -43,6 +44,7 @@ class BenchmarkCase:
     """A single benchmark case ready to be run."""
 
     group: str
+    pair: str
     name: str
     setup: Callable[[], tuple[tuple, dict]]
     func: Callable
@@ -66,83 +68,7 @@ NULL_PROBLEMS_FULL: list[BenchmarkProblem] = make_null_problems(
 
 
 # ---------------------------------------------------------------------------
-# ruptures benchmarks
-# ---------------------------------------------------------------------------
-
-
-def _ruptures_cases(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
-    """Build benchmark cases for ruptures detectors."""
-    cases: list[BenchmarkCase] = []
-
-    for problem in problems:
-        rng = np.random.default_rng(BENCHMARK_SEED)
-        data = problem.generate(rng)
-
-        # PELT RBF
-        def make_pelt_rbf_setup(d=data):
-            def setup():
-                algo = rpt.Pelt(model="rbf")
-                algo.fit(d)
-                return (algo,), {}
-            return setup
-
-        cases.append(BenchmarkCase(
-            group="ruptures",
-            name=f"pelt_rbf/{problem.name}",
-            setup=make_pelt_rbf_setup(),
-            func=lambda algo: algo.predict(pen=10),
-        ))
-
-        # PELT L2
-        def make_pelt_l2_setup(d=data):
-            def setup():
-                algo = rpt.Pelt(model="l2")
-                algo.fit(d)
-                return (algo,), {}
-            return setup
-
-        cases.append(BenchmarkCase(
-            group="ruptures",
-            name=f"pelt_l2/{problem.name}",
-            setup=make_pelt_l2_setup(),
-            func=lambda algo: algo.predict(pen=10),
-        ))
-
-        # BinSeg RBF
-        def make_binseg_rbf_setup(d=data):
-            def setup():
-                algo = rpt.Binseg(model="rbf")
-                algo.fit(d)
-                return (algo,), {}
-            return setup
-
-        cases.append(BenchmarkCase(
-            group="ruptures",
-            name=f"binseg_rbf/{problem.name}",
-            setup=make_binseg_rbf_setup(),
-            func=lambda algo: algo.predict(n_bkps=0),
-        ))
-
-        # Window RBF
-        def make_window_rbf_setup(d=data):
-            def setup():
-                algo = rpt.Window(model="rbf")
-                algo.fit(d)
-                return (algo,), {}
-            return setup
-
-        cases.append(BenchmarkCase(
-            group="ruptures",
-            name=f"window_rbf/{problem.name}",
-            setup=make_window_rbf_setup(),
-            func=lambda algo: algo.predict(n_bkps=0),
-        ))
-
-    return cases
-
-
-# ---------------------------------------------------------------------------
-# skchange benchmarks
+# Shared helpers
 # ---------------------------------------------------------------------------
 
 
@@ -152,121 +78,272 @@ def _skchange_run(det, X):
     return det.predict_changepoints(X)
 
 
-def _skchange_cases(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
-    """Build benchmark cases for skchange new_api detectors."""
+# ---------------------------------------------------------------------------
+# Comparison pair: PELT + L2 cost
+#   skchange: PELT(cost=L2Cost())
+#   ruptures: KernelCPD(kernel="linear", min_size=1, jump=1)
+# ---------------------------------------------------------------------------
+
+
+def _pair_pelt_l2(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
+    """PELT with L2/linear-kernel cost — skchange vs ruptures."""
+    pair_name = "pelt_l2"
     cases: list[BenchmarkCase] = []
 
     for problem in problems:
         rng = np.random.default_rng(BENCHMARK_SEED)
         data = problem.generate(rng)
 
-        # PELT L2Cost
-        def make_pelt_l2_setup(d=data):
+        # --- skchange side ---
+        def make_sk_setup(d=data):
             def setup():
                 det = SkchangePELT(cost=L2Cost())
                 return (det, d), {}
+
             return setup
 
-        cases.append(BenchmarkCase(
-            group="skchange",
-            name=f"pelt_l2/{problem.name}",
-            setup=make_pelt_l2_setup(),
-            func=_skchange_run,
-        ))
+        cases.append(
+            BenchmarkCase(
+                group="skchange",
+                pair=pair_name,
+                name=f"pelt_l2/{problem.name}",
+                setup=make_sk_setup(),
+                func=_skchange_run,
+            )
+        )
 
-        # PELT GaussianCost
-        def make_pelt_gauss_setup(d=data):
+        # --- ruptures side ---
+        def make_rpt_setup(d=data):
             def setup():
-                det = SkchangePELT(cost=GaussianCost())
-                return (det, d), {}
+                algo = rpt.KernelCPD(kernel="linear", min_size=1, jump=1)
+                algo.fit(d)
+                return (algo,), {}
+
             return setup
 
-        cases.append(BenchmarkCase(
-            group="skchange",
-            name=f"pelt_gaussian/{problem.name}",
-            setup=make_pelt_gauss_setup(),
-            func=_skchange_run,
-        ))
-
-        # MovingWindow CUSUM
-        def make_mw_cusum_setup(d=data):
-            def setup():
-                det = MovingWindow(change_score=CUSUM())
-                return (det, d), {}
-            return setup
-
-        cases.append(BenchmarkCase(
-            group="skchange",
-            name=f"moving_window_cusum/{problem.name}",
-            setup=make_mw_cusum_setup(),
-            func=_skchange_run,
-        ))
-
-        # SeededBinarySegmentation CUSUM
-        def make_sbs_cusum_setup(d=data):
-            def setup():
-                det = SeededBinarySegmentation(change_score=CUSUM())
-                return (det, d), {}
-            return setup
-
-        cases.append(BenchmarkCase(
-            group="skchange",
-            name=f"seeded_binseg_cusum/{problem.name}",
-            setup=make_sbs_cusum_setup(),
-            func=_skchange_run,
-        ))
-
-        # CROPS L2Cost
-        def make_crops_l2_setup(d=data):
-            def setup():
-                det = CROPS(cost=L2Cost())
-                return (det, d), {}
-            return setup
-
-        cases.append(BenchmarkCase(
-            group="skchange",
-            name=f"crops_l2/{problem.name}",
-            setup=make_crops_l2_setup(),
-            func=_skchange_run,
-        ))
+        cases.append(
+            BenchmarkCase(
+                group="ruptures",
+                pair=pair_name,
+                name=f"kernelcpd_linear/{problem.name}",
+                setup=make_rpt_setup(),
+                func=lambda algo: algo.predict(pen=10),
+            )
+        )
 
     return cases
 
 
 # ---------------------------------------------------------------------------
-# Registry: maps group name -> factory function
+# Comparison pair: PELT + Gaussian cost
+#   skchange: PELT(cost=GaussianCost())
+#   ruptures: Pelt(model="normal", min_size=1, jump=1)
 # ---------------------------------------------------------------------------
 
-BENCHMARK_GROUPS: dict[str, Callable[[list[BenchmarkProblem]], list[BenchmarkCase]]] = {
-    "ruptures": _ruptures_cases,
-    "skchange": _skchange_cases,
+
+def _pair_pelt_gaussian(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
+    """PELT with Gaussian/normal cost — skchange vs ruptures."""
+    pair_name = "pelt_gaussian"
+    cases: list[BenchmarkCase] = []
+
+    for problem in problems:
+        rng = np.random.default_rng(BENCHMARK_SEED)
+        data = problem.generate(rng)
+
+        # --- skchange side ---
+        def make_sk_setup(d=data):
+            def setup():
+                det = SkchangePELT(cost=GaussianCost())
+                return (det, d), {}
+
+            return setup
+
+        cases.append(
+            BenchmarkCase(
+                group="skchange",
+                pair=pair_name,
+                name=f"pelt_gaussian/{problem.name}",
+                setup=make_sk_setup(),
+                func=_skchange_run,
+            )
+        )
+
+        # --- ruptures side ---
+        def make_rpt_setup(d=data):
+            def setup():
+                algo = rpt.Pelt(model="normal", min_size=1, jump=1)
+                algo.fit(d)
+                return (algo,), {}
+
+            return setup
+
+        cases.append(
+            BenchmarkCase(
+                group="ruptures",
+                pair=pair_name,
+                name=f"pelt_normal/{problem.name}",
+                setup=make_rpt_setup(),
+                func=lambda algo: algo.predict(pen=10),
+            )
+        )
+
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Comparison pair: Moving Window + CUSUM / L2
+#   skchange: MovingWindow(change_score=CUSUM())
+#   ruptures: Window(model="l2", min_size=1, jump=1)
+# ---------------------------------------------------------------------------
+
+
+def _pair_moving_window(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
+    """Moving/sliding window with CUSUM/L2 — skchange vs ruptures."""
+    pair_name = "moving_window"
+    cases: list[BenchmarkCase] = []
+
+    for problem in problems:
+        rng = np.random.default_rng(BENCHMARK_SEED)
+        data = problem.generate(rng)
+
+        # --- skchange side ---
+        def make_sk_setup(d=data):
+            def setup():
+                det = MovingWindow(change_score=CUSUM())
+                return (det, d), {}
+
+            return setup
+
+        cases.append(
+            BenchmarkCase(
+                group="skchange",
+                pair=pair_name,
+                name=f"moving_window_cusum/{problem.name}",
+                setup=make_sk_setup(),
+                func=_skchange_run,
+            )
+        )
+
+        # --- ruptures side ---
+        def make_rpt_setup(d=data):
+            def setup():
+                algo = rpt.Window(model="l2", min_size=1, jump=1)
+                algo.fit(d)
+                return (algo,), {}
+
+            return setup
+
+        cases.append(
+            BenchmarkCase(
+                group="ruptures",
+                pair=pair_name,
+                name=f"window_l2/{problem.name}",
+                setup=make_rpt_setup(),
+                func=lambda algo: algo.predict(n_bkps=0),
+            )
+        )
+
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Comparison pair: Binary Segmentation + CUSUM / L2
+#   skchange: SeededBinarySegmentation(change_score=CUSUM())
+#   ruptures: Binseg(model="l2", min_size=1, jump=1)
+# ---------------------------------------------------------------------------
+
+
+def _pair_binseg(problems: list[BenchmarkProblem]) -> list[BenchmarkCase]:
+    """Binary segmentation with CUSUM/L2 — skchange vs ruptures."""
+    pair_name = "binseg"
+    cases: list[BenchmarkCase] = []
+
+    for problem in problems:
+        rng = np.random.default_rng(BENCHMARK_SEED)
+        data = problem.generate(rng)
+
+        # --- skchange side ---
+        def make_sk_setup(d=data):
+            def setup():
+                det = SeededBinarySegmentation(change_score=CUSUM())
+                return (det, d), {}
+
+            return setup
+
+        cases.append(
+            BenchmarkCase(
+                group="skchange",
+                pair=pair_name,
+                name=f"seeded_binseg_cusum/{problem.name}",
+                setup=make_sk_setup(),
+                func=_skchange_run,
+            )
+        )
+
+        # --- ruptures side ---
+        def make_rpt_setup(d=data):
+            def setup():
+                algo = rpt.Binseg(model="l2", min_size=1, jump=1)
+                algo.fit(d)
+                return (algo,), {}
+
+            return setup
+
+        cases.append(
+            BenchmarkCase(
+                group="ruptures",
+                pair=pair_name,
+                name=f"binseg_l2/{problem.name}",
+                setup=make_rpt_setup(),
+                func=lambda algo: algo.predict(n_bkps=0),
+            )
+        )
+
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Registry: maps pair name -> factory function
+# ---------------------------------------------------------------------------
+
+BENCHMARK_PAIRS: dict[str, Callable[[list[BenchmarkProblem]], list[BenchmarkCase]]] = {
+    "pelt_l2": _pair_pelt_l2,
+    "pelt_gaussian": _pair_pelt_gaussian,
+    "moving_window": _pair_moving_window,
+    "binseg": _pair_binseg,
 }
 
 
 def collect_cases(
     groups: list[str] | None = None,
+    pairs: list[str] | None = None,
     problem_set: str = "small",
 ) -> list[BenchmarkCase]:
-    """Collect benchmark cases, optionally filtered by group.
+    """Collect benchmark cases, optionally filtered by group and/or pair.
 
     Parameters
     ----------
     groups:
-        List of group names to include. ``None`` means all groups.
+        Filter to only include cases from these groups (``"ruptures"``,
+        ``"skchange"``). ``None`` means both.
+    pairs:
+        List of comparison-pair names to include. ``None`` means all pairs.
     problem_set:
         ``"small"`` or ``"full"`` problem battery.
     """
     problems = NULL_PROBLEMS_SMALL if problem_set == "small" else NULL_PROBLEMS_FULL
-    selected = groups if groups else list(BENCHMARK_GROUPS)
+    selected_pairs = pairs if pairs else list(BENCHMARK_PAIRS)
 
     cases: list[BenchmarkCase] = []
-    for g in selected:
-        if g not in BENCHMARK_GROUPS:
+    for p in selected_pairs:
+        if p not in BENCHMARK_PAIRS:
             raise ValueError(
-                f"Unknown benchmark group {g!r}. "
-                f"Available: {sorted(BENCHMARK_GROUPS)}"
+                f"Unknown benchmark pair {p!r}. Available: {sorted(BENCHMARK_PAIRS)}"
             )
-        cases.extend(BENCHMARK_GROUPS[g](problems))
+        cases.extend(BENCHMARK_PAIRS[p](problems))
+
+    # Optionally filter by group (ruptures / skchange)
+    if groups:
+        cases = [c for c in cases if c.group in groups]
 
     return cases
-
