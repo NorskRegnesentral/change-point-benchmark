@@ -46,9 +46,20 @@ class TestMakeNullProblems:
         )
         assert len(problems) == 6  # 2 × 3
 
-    def test_names_are_unique_per_n_samples(self) -> None:
-        problems = make_null_problems()
-        keys = [(p.name, p.dataset_config.n_samples) for p in problems]
+    def test_count_with_dimensions(self) -> None:
+        problems = make_null_problems(
+            n_samples_list=[100, 500],
+            distributions=["normal", "t"],
+            n_columns_list=[1, 5],
+        )
+        assert len(problems) == 8  # 2 n_samples × 2 dists × 2 dims
+
+    def test_names_are_unique_per_n_samples_and_dimension(self) -> None:
+        problems = make_null_problems(n_columns_list=[1, 5])
+        keys = [
+            (p.name, p.dataset_config.n_samples, p.dataset_config.n_columns)
+            for p in problems
+        ]
         assert len(keys) == len(set(keys))
 
     def test_all_null_changepoints(self) -> None:
@@ -60,7 +71,19 @@ class TestMakeNullProblems:
         problems = make_null_problems(
             n_samples_list=[300],
             distributions=["normal"],
-            n_columns=2,
+            n_columns_list=[2],
         )
         data = problems[0].generate(rng)
         assert data.shape == (300, 2)
+
+    def test_multivariate_shapes(self) -> None:
+        rng = np.random.default_rng(42)
+        problems = make_null_problems(
+            n_samples_list=[100],
+            distributions=["normal"],
+            n_columns_list=[1, 5, 10],
+        )
+        assert len(problems) == 3
+        for prob, expected_p in zip(problems, [1, 5, 10]):
+            data = prob.generate(rng)
+            assert data.shape == (100, expected_p)

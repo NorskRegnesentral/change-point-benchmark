@@ -44,7 +44,13 @@ BENCHMARK_SEED: int = 42
 
 @dataclass
 class BenchmarkCase:
-    """A single benchmark case ready to be run."""
+    """A single benchmark case ready to be run.
+
+    Uses a two-phase setup for memory efficiency:
+    - ``prepare()`` generates data just-in-time (called once before timing loop)
+    - ``setup(data)`` creates a fresh detector per run
+    - ``func`` is the timed operation
+    """
 
     package: str
     cpd_algorithm: str
@@ -54,7 +60,8 @@ class BenchmarkCase:
     data_dimension: int
     include_fit: bool
     min_segment_length: int
-    setup: Callable[[], tuple[tuple, dict]]
+    prepare: Callable[[], np.ndarray]
+    setup: Callable[[np.ndarray], tuple[tuple, dict]]
     func: Callable
 
 
@@ -63,18 +70,24 @@ class BenchmarkCase:
 # ---------------------------------------------------------------------------
 
 small_n_samples_list = [100, 250, 500, 750, 1000]
-NULL_PROBLEMS_SMALL: list[BenchmarkProblem] = make_null_problems(
-    n_samples_list=small_n_samples_list,
-    distributions=["normal", "t", "gamma", "laplace", "exponential"],
-    scale=1.0,
-)
-
 large_n_samples_list = [1500, 2500, 5000, 7500, 10_000]
-NULL_PROBLEMS_FULL: list[BenchmarkProblem] = make_null_problems(
-    n_samples_list=small_n_samples_list + large_n_samples_list,
-    distributions=["normal", "t", "gamma", "laplace", "exponential"],
-    scale=1.0,
-)
+
+
+def _make_problems(
+    problem_set: str, n_columns_list: list[int]
+) -> list[BenchmarkProblem]:
+    """Create problem battery with given dimensions."""
+    n_samples = (
+        small_n_samples_list
+        if problem_set == "small"
+        else small_n_samples_list + large_n_samples_list
+    )
+    return make_null_problems(
+        n_samples_list=n_samples,
+        distributions=["normal", "t", "gamma", "laplace", "exponential"],
+        scale=1.0,
+        n_columns_list=n_columns_list,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +96,15 @@ NULL_PROBLEMS_FULL: list[BenchmarkProblem] = make_null_problems(
 
 #: Penalty used for all PELT-based pairs (same for skchange and ruptures).
 PELT_PENALTY: float = 10.0
+
+
+def _make_prepare(problem: BenchmarkProblem, seed: int = BENCHMARK_SEED):
+    """Create a prepare closure that generates data just-in-time."""
+
+    def prepare() -> np.ndarray:
+        return problem.generate(np.random.default_rng(seed))
+
+    return prepare
 
 
 def _skchange_run(det, X):
@@ -115,29 +137,28 @@ def _pair_pelt_l2(
     sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
-        rng = np.random.default_rng(BENCHMARK_SEED)
-        data = problem.generate(rng)
         cfg = problem.dataset_config
+        prepare = _make_prepare(problem)
 
-        def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
-            def setup():
+        def make_sk_setup(fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 det = SkchangePELT(
                     cost=L2Cost(),
                     penalty=PELT_PENALTY,
                     min_segment_length=msl,
                 )
                 if not fit:
-                    det.fit(d)
-                return (det, d), {}
+                    det.fit(data)
+                return (det, data), {}
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
-            def setup():
+        def make_rpt_setup(fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 algo = rpt.KernelCPD(kernel="linear", min_size=msl, jump=1)
                 if not fit:
-                    algo.fit(d)
-                return (algo, d), {}
+                    algo.fit(data)
+                return (algo, data), {}
 
             return setup
 
@@ -156,6 +177,7 @@ def _pair_pelt_l2(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -171,6 +193,7 @@ def _pair_pelt_l2(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -196,29 +219,28 @@ def _pair_pelt_gaussian(
     sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
-        rng = np.random.default_rng(BENCHMARK_SEED)
-        data = problem.generate(rng)
         cfg = problem.dataset_config
+        prepare = _make_prepare(problem)
 
-        def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
-            def setup():
+        def make_sk_setup(fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 det = SkchangePELT(
                     cost=GaussianCost(),
                     penalty=PELT_PENALTY,
                     min_segment_length=msl,
                 )
                 if not fit:
-                    det.fit(d)
-                return (det, d), {}
+                    det.fit(data)
+                return (det, data), {}
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
-            def setup():
+        def make_rpt_setup(fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 algo = rpt.Pelt(model="normal", min_size=msl, jump=1)
                 if not fit:
-                    algo.fit(d)
-                return (algo, d), {}
+                    algo.fit(data)
+                return (algo, data), {}
 
             return setup
 
@@ -237,6 +259,7 @@ def _pair_pelt_gaussian(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -252,6 +275,7 @@ def _pair_pelt_gaussian(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -277,25 +301,24 @@ def _pair_moving_window(
     sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
-        rng = np.random.default_rng(BENCHMARK_SEED)
-        data = problem.generate(rng)
         cfg = problem.dataset_config
+        prepare = _make_prepare(problem)
 
-        def make_sk_setup(d=data, fit=include_fit):
-            def setup():
+        def make_sk_setup(fit=include_fit):
+            def setup(data: np.ndarray):
                 det = MovingWindow(change_score=CUSUM())
                 if not fit:
-                    det.fit(d)
-                return (det, d), {}
+                    det.fit(data)
+                return (det, data), {}
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
-            def setup():
+        def make_rpt_setup(fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 algo = rpt.Window(model="l2", min_size=msl, jump=1)
                 if not fit:
-                    algo.fit(d)
-                return (algo, d), {}
+                    algo.fit(data)
+                return (algo, data), {}
 
             return setup
 
@@ -314,6 +337,7 @@ def _pair_moving_window(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -329,6 +353,7 @@ def _pair_moving_window(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -354,25 +379,24 @@ def _pair_binseg(
     sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
-        rng = np.random.default_rng(BENCHMARK_SEED)
-        data = problem.generate(rng)
         cfg = problem.dataset_config
+        prepare = _make_prepare(problem)
 
-        def make_sk_setup(d=data, fit=include_fit):
-            def setup():
+        def make_sk_setup(fit=include_fit):
+            def setup(data: np.ndarray):
                 det = SeededBinarySegmentation(change_score=CUSUM())
                 if not fit:
-                    det.fit(d)
-                return (det, d), {}
+                    det.fit(data)
+                return (det, data), {}
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
-            def setup():
+        def make_rpt_setup(fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 algo = rpt.Binseg(model="l2", min_size=msl, jump=1)
                 if not fit:
-                    algo.fit(d)
-                return (algo, d), {}
+                    algo.fit(data)
+                return (algo, data), {}
 
             return setup
 
@@ -391,6 +415,7 @@ def _pair_binseg(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -406,6 +431,7 @@ def _pair_binseg(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -435,29 +461,26 @@ def _pair_moving_window_l2(
     sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
-        rng = np.random.default_rng(BENCHMARK_SEED)
-        data = problem.generate(rng)
         cfg = problem.dataset_config
+        prepare = _make_prepare(problem)
 
-        def make_sk_setup(d=data, bandwidth=bw, fit=include_fit):
-            def setup():
+        def make_sk_setup(bandwidth=bw, fit=include_fit):
+            def setup(data: np.ndarray):
                 det = MovingWindow(
                     change_score=CostChangeScore(L2Cost()), bandwidth=bandwidth
                 )
                 if not fit:
-                    det.fit(d)
-                return (det, d), {}
+                    det.fit(data)
+                return (det, data), {}
 
             return setup
 
-        def make_rpt_setup(
-            d=data, width=2 * bw, fit=include_fit, msl=min_segment_length
-        ):
-            def setup():
+        def make_rpt_setup(width=2 * bw, fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 algo = rpt.Window(model="l2", width=width, min_size=msl, jump=1)
                 if not fit:
-                    algo.fit(d)
-                return (algo, d), {}
+                    algo.fit(data)
+                return (algo, data), {}
 
             return setup
 
@@ -476,6 +499,7 @@ def _pair_moving_window_l2(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -491,6 +515,7 @@ def _pair_moving_window_l2(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -519,29 +544,26 @@ def _pair_moving_window_l1(
     sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
-        rng = np.random.default_rng(BENCHMARK_SEED)
-        data = problem.generate(rng)
         cfg = problem.dataset_config
+        prepare = _make_prepare(problem)
 
-        def make_sk_setup(d=data, bandwidth=bw, fit=include_fit):
-            def setup():
+        def make_sk_setup(bandwidth=bw, fit=include_fit):
+            def setup(data: np.ndarray):
                 det = MovingWindow(
                     change_score=CostChangeScore(L1Cost()), bandwidth=bandwidth
                 )
                 if not fit:
-                    det.fit(d)
-                return (det, d), {}
+                    det.fit(data)
+                return (det, data), {}
 
             return setup
 
-        def make_rpt_setup(
-            d=data, width=2 * bw, fit=include_fit, msl=min_segment_length
-        ):
-            def setup():
+        def make_rpt_setup(width=2 * bw, fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 algo = rpt.Window(model="l1", width=width, min_size=msl, jump=1)
                 if not fit:
-                    algo.fit(d)
-                return (algo, d), {}
+                    algo.fit(data)
+                return (algo, data), {}
 
             return setup
 
@@ -560,6 +582,7 @@ def _pair_moving_window_l1(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -575,6 +598,7 @@ def _pair_moving_window_l1(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -603,31 +627,30 @@ def _pair_pelt_linear_trend(
     sk_func = _skchange_run if include_fit else _skchange_predict_only
 
     for problem in problems:
-        rng = np.random.default_rng(BENCHMARK_SEED)
-        data = problem.generate(rng)
         cfg = problem.dataset_config
+        prepare = _make_prepare(problem)
 
-        def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
-            def setup():
+        def make_sk_setup(fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 det = SkchangePELT(
                     cost=LinearTrendCost(),
                     penalty=PELT_PENALTY,
                     min_segment_length=msl,
                 )
                 if not fit:
-                    det.fit(d)
-                return (det, d), {}
+                    det.fit(data)
+                return (det, data), {}
 
             return setup
 
-        def make_rpt_setup(d=data, fit=include_fit, msl=min_segment_length):
-            def setup():
+        def make_rpt_setup(fit=include_fit, msl=min_segment_length):
+            def setup(data: np.ndarray):
                 algo = rpt.Pelt(
                     custom_cost=rpt.costs.CostCLinear(), min_size=msl, jump=1
                 )
                 if not fit:
-                    algo.fit(d)
-                return (algo, d), {}
+                    algo.fit(data)
+                return (algo, data), {}
 
             return setup
 
@@ -646,6 +669,7 @@ def _pair_pelt_linear_trend(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_sk_setup(),
                 func=sk_func,
             )
@@ -661,6 +685,7 @@ def _pair_pelt_linear_trend(
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
+                prepare=prepare,
                 setup=make_rpt_setup(),
                 func=rpt_func,
             )
@@ -675,13 +700,27 @@ def _pair_pelt_linear_trend(
 BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
     "pelt_l2": _pair_pelt_l2,
     "pelt_gaussian": _pair_pelt_gaussian,
-    # "pelt_linear_trend": _pair_pelt_linear_trend,
+    # "pelt_linear_trend": _pair_pelt_linear_trend, ## Not actually comparable.
     "moving_window": _pair_moving_window,
     "moving_window_l2": _pair_moving_window_l2,
     "moving_window_l1": _pair_moving_window_l1,
     "binseg": _pair_binseg,
 }
 
+# TODO: Add mv "rank" pair comparison (only sensible for multivariate data)
+#       skchange: MovingWindow(change_score=CostChangeScore(RankCost()), bandwidth=BW)
+#       ruptures: Window(model="rank", width=2*BW, min_size=1, jump=1)
+
+# TODO: Add Pelt "custom cost" pair comparison, e.g. Poisson cost in Ruptures,
+#       vs CostChangeScore(PoissonCost()) in skchange PELT.
+#       skchange: PELT(cost=CostChangeScore(PoissonCost()), penalty=PELT_PENALTY,
+#                      min_segment_length=1)
+#      ruptures: Pelt(custom_cost=CustomPoisson(), min_size=1, jump=1,
+#                      penalty=PELT_PENALTY)
+
+#: Pairs that support data with more than one column (p > 1).
+#: Pairs NOT in this set will only receive univariate (p=1) problems.
+MULTIVARIATE_PAIRS: set[str] = set()
 
 PAIR_CATEGORIES: dict[str, list[str]] = {
     "mean_change": [
@@ -705,6 +744,7 @@ def collect_cases(
     problem_set: str = "small",
     include_fit: bool = True,
     min_segment_length: int = 1,
+    dimensions: list[int] | None = None,
 ) -> list[BenchmarkCase]:
     """Collect benchmark cases, optionally filtered by package, pair, or category.
 
@@ -727,8 +767,16 @@ def collect_cases(
     min_segment_length:
         Minimum segment length for the detector (default: 1).  Maps to
         ``min_size`` in ruptures and ``min_segment_length`` in skchange PELT.
+    dimensions:
+        List of data dimensionalities (number of columns) to benchmark.
+        Default: ``[1]``.  Pairs not in :data:`MULTIVARIATE_PAIRS` will only
+        receive univariate (p=1) problems regardless of this setting.
     """
-    problems = NULL_PROBLEMS_SMALL if problem_set == "small" else NULL_PROBLEMS_FULL
+    if dimensions is None:
+        dimensions = [1]
+
+    # Generate problems with all requested dimensions
+    problems = _make_problems(problem_set, n_columns_list=dimensions)
 
     # Resolve which pairs to run
     selected_pairs: list[str] = []
@@ -757,9 +805,22 @@ def collect_cases(
             raise ValueError(
                 f"Unknown benchmark pair {p!r}. Available: {sorted(BENCHMARK_PAIRS)}"
             )
+        # Filter problems by dimensionality support
+        if p in MULTIVARIATE_PAIRS:
+            pair_problems = problems
+        else:
+            pair_problems = [
+                prob
+                for prob in problems
+                if prob.dataset_config.n_columns == 1
+            ]
+
+        if not pair_problems:
+            continue
+
         cases.extend(
             BENCHMARK_PAIRS[p](
-                problems,
+                pair_problems,
                 include_fit=include_fit,
                 min_segment_length=min_segment_length,
             )

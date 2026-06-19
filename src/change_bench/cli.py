@@ -102,6 +102,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Maps to min_size in ruptures and min_segment_length in skchange."
         ),
     )
+    parser.add_argument(
+        "--dimensions",
+        nargs="+",
+        type=int,
+        default=[1],
+        help=(
+            "Data dimensionalities (number of columns) to benchmark "
+            "(default: 1). Pairs that don't support multivariate data "
+            "will only run with p=1 regardless of this setting."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -125,6 +136,7 @@ def main(argv: list[str] | None = None) -> None:
                 problem_set=args.problem_set,
                 include_fit=include_fit,
                 min_segment_length=args.min_segment_length,
+                dimensions=args.dimensions,
             )
         )
 
@@ -157,6 +169,7 @@ def main(argv: list[str] | None = None) -> None:
             data_dimension=case.data_dimension,
             include_fit=case.include_fit,
             min_segment_length=case.min_segment_length,
+            prepare=case.prepare,
             setup=case.setup,
             func=case.func,
             n_runs=args.runs,

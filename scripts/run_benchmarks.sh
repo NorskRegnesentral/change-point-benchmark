@@ -13,6 +13,7 @@
 # Recognised flags (consumed by this script, NOT forwarded to bench):
 #   --min-segment-length N   min_segment_length for needs_min_segment_length
 #                            pairs (default: 3)
+#   --dimensions N [N ...]   data dimensionalities to benchmark (default: 1)
 #
 # All other arguments are forwarded to both `uv run bench` invocations.
 
@@ -29,6 +30,7 @@ mkdir -p "$RESULTS_DIR"
 # ---------------------------------------------------------------------------
 RUNS=10
 MIN_SEGMENT_LENGTH=3
+DIMENSIONS=(1)
 FORWARD_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -40,6 +42,14 @@ while [[ $# -gt 0 ]]; do
         -n|--runs)
             RUNS="$2"
             shift 2
+            ;;
+        --dimensions)
+            DIMENSIONS=()
+            shift
+            while [[ $# -gt 0 && "$1" != --* ]]; do
+                DIMENSIONS+=("$1")
+                shift
+            done
             ;;
         *)
             FORWARD_ARGS+=("$1")
@@ -54,6 +64,7 @@ MSL_OUTPUT="$RESULTS_DIR/needs_min_segment_length.parquet"
 echo "=== Change-Point Benchmark Runner ==="
 echo "Project:                        $PROJECT_DIR"
 echo "Runs per case:                  $RUNS"
+echo "Dimensions:                     ${DIMENSIONS[*]}"
 echo "mean_change output:             $MEAN_CHANGE_OUTPUT"
 echo "needs_min_segment_length output: $MSL_OUTPUT  (min_segment_length=$MIN_SEGMENT_LENGTH)"
 echo ""
@@ -67,6 +78,7 @@ uv run bench \
     --categories mean_change \
     --include-fit both \
     --min-segment-length 1 \
+    --dimensions "${DIMENSIONS[@]}" \
     -o "$MEAN_CHANGE_OUTPUT" \
     "${FORWARD_ARGS[@]}"
 
@@ -79,6 +91,7 @@ uv run bench \
     --categories needs_min_segment_length \
     --include-fit both \
     --min-segment-length "$MIN_SEGMENT_LENGTH" \
+    --dimensions "${DIMENSIONS[@]}" \
     -o "$MSL_OUTPUT" \
     "${FORWARD_ARGS[@]}"
 

@@ -74,11 +74,19 @@ def run_benchmark(
     data_dimension: int,
     include_fit: bool,
     min_segment_length: int,
-    setup: Callable[[], tuple[tuple, dict]],
+    prepare: Callable,
+    setup: Callable,
     func: Callable,
     n_runs: int,
 ) -> BenchmarkResult:
     """Run a single benchmark case *n_runs* times and return statistics.
+
+    Uses a two-phase protocol for memory efficiency:
+    1. ``prepare()`` generates the data array (called once).
+    2. ``setup(data)`` creates a fresh detector per run.
+    3. ``func(*args, **kwargs)`` is timed.
+
+    After all runs complete the data array goes out of scope.
 
     Parameters
     ----------
@@ -98,9 +106,12 @@ def run_benchmark(
         Whether the timed operation includes fitting.
     min_segment_length:
         Minimum segment length used by the detector.
+    prepare:
+        Callable that generates the data array.  Called once before the
+        timing loop.
     setup:
-        Callable returning ``(args, kwargs)`` to pass to *func*.
-        Called once per run so each iteration gets a fresh setup.
+        Callable taking the data array and returning ``(args, kwargs)`` to
+        pass to *func*.  Called once per run for a fresh detector.
     func:
         The function to time.  Called as ``func(*args, **kwargs)``.
     n_runs:
@@ -118,8 +129,10 @@ def run_benchmark(
         n_runs=n_runs,
     )
 
+    data = prepare()
+
     for _ in range(n_runs):
-        args, kwargs = setup()
+        args, kwargs = setup(data)
         gc_was_enabled = gc.isenabled()
         gc.disable()
         t0 = time.perf_counter()

@@ -59,12 +59,12 @@ def make_null_problems(
         "exponential",
     ),
     scale: float = 1.0,
-    n_columns: int = 1,
+    n_columns_list: Sequence[int] = (1,),
 ) -> list[BenchmarkProblem]:
     """Create a standard battery of null-case benchmark problems.
 
-    Every combination of ``n_samples_list × distributions`` produces one
-    :class:`BenchmarkProblem` with no change points (``true_changepoints=[]``).
+    Every combination of ``n_samples_list × distributions × n_columns_list``
+    produces one :class:`BenchmarkProblem` with no change points.
 
     Parameters
     ----------
@@ -77,28 +77,29 @@ def make_null_problems(
     scale:
         Spread parameter forwarded to
         :class:`~change_bench.datasets.null_case.NullDatasetConfig`.
-    n_columns:
-        Number of independent channels per time series.
+    n_columns_list:
+        Sequence of dimensionalities (number of columns) to benchmark.
 
     Returns
     -------
     list[BenchmarkProblem]
-        One problem per ``(n_samples, distribution)`` combination.
+        One problem per ``(n_samples, distribution, n_columns)`` combination.
     """
     problems: list[BenchmarkProblem] = []
     for n in n_samples_list:
         for dist in distributions:
-            dist_label = dist if isinstance(dist, str) else type(dist).__name__
-            problems.append(
-                BenchmarkProblem(
-                    name=f"null_{dist_label}",
-                    dataset_config=NullDatasetConfig(
-                        n_samples=n,
-                        distribution=dist,
-                        scale=scale,
-                        n_columns=n_columns,
-                    ),
-                    true_changepoints=[],
+            for n_cols in n_columns_list:
+                dist_label = dist if isinstance(dist, str) else type(dist).__name__
+                problems.append(
+                    BenchmarkProblem(
+                        name=f"null_{dist_label}",
+                        dataset_config=NullDatasetConfig(
+                            n_samples=n,
+                            distribution=dist,
+                            scale=scale,
+                            n_columns=n_cols,
+                        ),
+                        true_changepoints=[],
+                    )
                 )
-            )
     return problems
