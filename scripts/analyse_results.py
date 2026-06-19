@@ -39,24 +39,26 @@ FIT_DASH: dict[bool, str] = {
 # Configuration — change this path when running interactively
 # ---------------------------------------------------------------------------
 project_dir = Path(__file__).parent.parent
-# results_path: Path = project_dir / "results/mean_change.parquet"
-# results_path: Path = project_dir / "results/needs_min_segment_length.parquet"
-results_path: Path = project_dir / "results/pelt_l2.parquet"
+results_dir: Path = project_dir / "results"
 
-if not results_path.exists():
-    print(f"Error: results file not found at {results_path}")
-    print(
-        "Please set the 'results_path' variable in the script "
-        "to point to your Parquet file."
-    )
+if not results_dir.exists():
+    print(f"Error: results directory not found at {results_dir}")
+    sys.exit(1)
+
+parquet_files = sorted(results_dir.glob("*.parquet"))
+if not parquet_files:
+    print(f"Error: no .parquet files found in {results_dir}")
     sys.exit(1)
 
 # %% ---------------------------------------------------------------------------
-# Load data
+# Load data — concatenate all parquet files in the results directory
 # ---------------------------------------------------------------------------
 
-df = pl.read_parquet(results_path)
-print(f"Loaded {len(df)} rows from {results_path}")
+parts = [pl.read_parquet(p) for p in parquet_files]
+df = pl.concat(parts)
+print(f"Loaded {len(df)} rows from {len(parquet_files)} file(s) in {results_dir}/")
+for p in parquet_files:
+    print(f"  - {p.name}")
 print(f"Columns: {df.columns}")
 print(f"Algorithm pairs: {df['cpd_algorithm'].unique().sort().to_list()}")
 print(f"Packages: {df['package'].unique().sort().to_list()}")
