@@ -1,4 +1,4 @@
-"""Tests that _CostPoisson (ruptures) agrees with PoissonCost (skchange)."""
+"""Tests that CostPoisson (ruptures) agrees with PoissonCost (skchange)."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ import numpy as np
 import pytest
 from skchange.new_api.interval_scorers import PoissonCost
 
-from change_bench.benchmarks.null_case import _CostPoisson
+from change_bench.benchmarks.comparison_pairs.pelt_poisson import CostPoisson
 
 
 class TestCostPoissonAgreement:
-    """Verify _CostPoisson matches skchange PoissonCost on various segments."""
+    """Verify CostPoisson matches skchange PoissonCost on various segments."""
 
     def _skchange_segment_cost(self, X: np.ndarray, start: int, end: int) -> float:
         """Compute total segment cost using skchange PoissonCost."""
@@ -22,8 +22,8 @@ class TestCostPoissonAgreement:
         return cost.evaluate(cache, intervals).sum()
 
     def _ruptures_segment_cost(self, X: np.ndarray, start: int, end: int) -> float:
-        """Compute total segment cost using _CostPoisson."""
-        cost = _CostPoisson()
+        """Compute total segment cost using CostPoisson."""
+        cost = CostPoisson()
         cost.fit(X)
         return cost.error(start, end)
 
@@ -98,6 +98,5 @@ class TestCostPoissonAgreement:
             sk = self._skchange_segment_cost(X, i, i + 1)
             rpt = self._ruptures_segment_cost(X, i, i + 1)
             assert sk == pytest.approx(rpt, rel=1e-10), (
-                f"Mismatch on single obs [{i}:{i+1}]: "
-                f"skchange={sk}, ruptures={rpt}"
+                f"Mismatch on single obs [{i}:{i + 1}]: skchange={sk}, ruptures={rpt}"
             )

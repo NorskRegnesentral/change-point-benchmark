@@ -16,7 +16,7 @@ from pathlib import Path
 
 import polars as pl
 
-from change_bench.benchmarks.null_case import (
+from change_bench.benchmarks.registry import (
     BENCHMARK_PAIRS,
     PAIR_CATEGORIES,
     collect_cases,

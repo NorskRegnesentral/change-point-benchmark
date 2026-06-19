@@ -5,12 +5,12 @@ Each module in this subpackage exposes:
 - ``collect_cases()``: convenience function to gather cases
 """
 
-from change_bench.benchmarks.null_case import (
+from change_bench.benchmarks.registry import (
     BENCHMARK_PAIRS,
     PAIR_CATEGORIES,
-    BenchmarkCase,
     collect_cases,
 )
+from change_bench.benchmarks.comparison_pairs import BenchmarkCase
 
 __all__ = [
     "BENCHMARK_PAIRS",
