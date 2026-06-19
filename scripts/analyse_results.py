@@ -29,6 +29,12 @@ PACKAGE_COLORS: dict[str, str] = {
     "ruptures": "#ff7f0e",  # orange
 }
 
+#: Line dash style per fit mode
+FIT_DASH: dict[bool, str] = {
+    True: "solid",       # fit+predict
+    False: "dash",       # predict only
+}
+
 # ---------------------------------------------------------------------------
 # Configuration — change this path when running interactively
 # ---------------------------------------------------------------------------
@@ -63,11 +69,6 @@ print()
 pairs = df["cpd_algorithm"].unique().sort().to_list()
 packages = df["package"].unique().sort().to_list()
 include_fit_values = df["include_fit"].unique().sort().to_list()
-fit_label = (
-    "fit+predict" if all(include_fit_values) else
-    "predict only" if not any(include_fit_values) else
-    "mixed (fit+predict / predict only)"
-)
 
 n_pairs = len(pairs)
 fig = make_subplots(
@@ -79,37 +80,51 @@ fig = make_subplots(
 
 for col_idx, pair in enumerate(pairs, start=1):
     pair_df = df.filter(pl.col("cpd_algorithm") == pair)
+    shown_legends: set[str] = set()
 
-    for pkg in packages:
-        pkg_df = (
-            pair_df.filter(pl.col("package") == pkg)
-            .group_by("n_samples")
-            .agg(
-                pl.col("mean_s").mean().alias("mean"),
-                pl.col("std_s").mean().alias("std"),
+    for fit_val in include_fit_values:
+        fit_suffix = "fit+predict" if fit_val else "predict only"
+        dash = FIT_DASH.get(fit_val, "solid")
+
+        for pkg in packages:
+            pkg_df = (
+                pair_df.filter(
+                    (pl.col("package") == pkg) & (pl.col("include_fit") == fit_val)
+                )
+                .group_by("n_samples")
+                .agg(
+                    pl.col("mean_s").mean().alias("mean"),
+                    pl.col("std_s").mean().alias("std"),
+                )
+                .sort("n_samples")
             )
-            .sort("n_samples")
-        )
 
-        n_samples = pkg_df["n_samples"].to_list()
-        means = pkg_df["mean"].to_list()
-        stds = pkg_df["std"].to_list()
+            if pkg_df.is_empty():
+                continue
 
-        fig.add_trace(
-            go.Scatter(
-                x=n_samples,
-                y=means,
-                error_y=dict(type="data", array=stds, visible=True),
-                mode="lines+markers",
-                name=pkg,
-                legendgroup=pkg,
-                showlegend=(col_idx == 1),
-                line=dict(color=PACKAGE_COLORS.get(pkg)),
-                marker=dict(color=PACKAGE_COLORS.get(pkg)),
-            ),
-            row=1,
-            col=col_idx,
-        )
+            n_samples = pkg_df["n_samples"].to_list()
+            means = pkg_df["mean"].to_list()
+            stds = pkg_df["std"].to_list()
+
+            legend_name = f"{pkg} ({fit_suffix})"
+            show_legend = legend_name not in shown_legends
+            shown_legends.add(legend_name)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=n_samples,
+                    y=means,
+                    error_y=dict(type="data", array=stds, visible=True),
+                    mode="lines+markers",
+                    name=legend_name,
+                    legendgroup=legend_name,
+                    showlegend=show_legend,
+                    line=dict(color=PACKAGE_COLORS.get(pkg), dash=dash),
+                    marker=dict(color=PACKAGE_COLORS.get(pkg)),
+                ),
+                row=1,
+                col=col_idx,
+            )
 
     fig.update_xaxes(title_text="n_samples", row=1, col=col_idx)
     fig.update_yaxes(
@@ -123,7 +138,7 @@ for col_idx, pair in enumerate(pairs, start=1):
     )
 
 fig.update_layout(
-    title=f"Runtime comparison (log scale): skchange vs ruptures [{fit_label}]",
+    title="Runtime comparison (log scale): skchange vs ruptures",
     height=500,
     width=500 * n_pairs,
 )
