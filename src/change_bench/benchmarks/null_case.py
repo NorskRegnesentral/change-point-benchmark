@@ -62,14 +62,16 @@ class BenchmarkCase:
 # Problem batteries
 # ---------------------------------------------------------------------------
 
+small_n_samples_list = [100, 250, 500, 750, 1000]
 NULL_PROBLEMS_SMALL: list[BenchmarkProblem] = make_null_problems(
-    n_samples_list=[500, 1000],
+    n_samples_list=small_n_samples_list,
     distributions=["normal", "t", "gamma", "laplace", "exponential"],
     scale=1.0,
 )
 
+large_n_samples_list = [1500, 2500, 5000, 7500, 10_000]
 NULL_PROBLEMS_FULL: list[BenchmarkProblem] = make_null_problems(
-    n_samples_list=[500, 1000, 5000, 10_000],
+    n_samples_list=small_n_samples_list + large_n_samples_list,
     distributions=["normal", "t", "gamma", "laplace", "exponential"],
     scale=1.0,
 )
@@ -78,6 +80,11 @@ NULL_PROBLEMS_FULL: list[BenchmarkProblem] = make_null_problems(
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
+#: Penalty used for all PELT-based pairs (same for skchange and ruptures).
+PELT_PENALTY: float = 10.0
+
+
 def _skchange_run(det, X):
     """Fit + predict for a skchange detector (the timed operation)."""
     det.fit(X)
@@ -114,7 +121,11 @@ def _pair_pelt_l2(
 
         def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                det = SkchangePELT(cost=L2Cost(), min_segment_length=msl)
+                det = SkchangePELT(
+                    cost=L2Cost(),
+                    penalty=PELT_PENALTY,
+                    min_segment_length=msl,
+                )
                 if not fit:
                     det.fit(d)
                 return (det, d), {}
@@ -133,7 +144,7 @@ def _pair_pelt_l2(
         def rpt_func(algo, d, _fit=include_fit):
             if _fit:
                 algo.fit(d)
-            return algo.predict(pen=10)
+            return algo.predict(pen=PELT_PENALTY)
 
         cases.append(
             BenchmarkCase(
@@ -191,7 +202,11 @@ def _pair_pelt_gaussian(
 
         def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                det = SkchangePELT(cost=GaussianCost(), min_segment_length=msl)
+                det = SkchangePELT(
+                    cost=GaussianCost(),
+                    penalty=PELT_PENALTY,
+                    min_segment_length=msl,
+                )
                 if not fit:
                     det.fit(d)
                 return (det, d), {}
@@ -210,7 +225,7 @@ def _pair_pelt_gaussian(
         def rpt_func(algo, d, _fit=include_fit):
             if _fit:
                 algo.fit(d)
-            return algo.predict(pen=10)
+            return algo.predict(pen=PELT_PENALTY)
 
         cases.append(
             BenchmarkCase(
@@ -404,7 +419,7 @@ def _pair_binseg(
 #   skchange: MovingWindow(change_score=CostChangeScore(L2Cost()), bandwidth=BW)
 #   ruptures: Window(model="l2", width=2*BW, min_size=1, jump=1)
 # ---------------------------------------------------------------------------
-_MW_BANDWIDTH: int = 50
+_MW_BANDWIDTH: int = 25
 
 
 def _pair_moving_window_l2(
@@ -594,7 +609,11 @@ def _pair_pelt_linear_trend(
 
         def make_sk_setup(d=data, fit=include_fit, msl=min_segment_length):
             def setup():
-                det = SkchangePELT(cost=LinearTrendCost(), min_segment_length=msl)
+                det = SkchangePELT(
+                    cost=LinearTrendCost(),
+                    penalty=PELT_PENALTY,
+                    min_segment_length=msl,
+                )
                 if not fit:
                     det.fit(d)
                 return (det, d), {}
@@ -615,7 +634,7 @@ def _pair_pelt_linear_trend(
         def rpt_func(algo, d, _fit=include_fit):
             if _fit:
                 algo.fit(d)
-            return algo.predict(pen=10)
+            return algo.predict(pen=PELT_PENALTY)
 
         cases.append(
             BenchmarkCase(
@@ -653,11 +672,10 @@ def _pair_pelt_linear_trend(
 # ---------------------------------------------------------------------------
 # Registry: maps pair name -> factory function
 # ---------------------------------------------------------------------------
-
 BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
     "pelt_l2": _pair_pelt_l2,
     "pelt_gaussian": _pair_pelt_gaussian,
-    "pelt_linear_trend": _pair_pelt_linear_trend,
+    # "pelt_linear_trend": _pair_pelt_linear_trend,
     "moving_window": _pair_moving_window,
     "moving_window_l2": _pair_moving_window_l2,
     "moving_window_l1": _pair_moving_window_l1,
@@ -675,7 +693,7 @@ PAIR_CATEGORIES: dict[str, list[str]] = {
     ],
     "needs_min_segment_length": [
         "pelt_gaussian",
-        "pelt_linear_trend",
+        # "pelt_linear_trend",
     ],
 }
 

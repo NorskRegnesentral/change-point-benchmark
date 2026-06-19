@@ -65,6 +65,7 @@ echo "--- [1/2] Running mean_change benchmarks ---"
 uv run bench \
     -n "$RUNS" \
     --categories mean_change \
+    --include-fit both \
     --min-segment-length 1 \
     -o "$MEAN_CHANGE_OUTPUT" \
     "${FORWARD_ARGS[@]}"
@@ -76,6 +77,7 @@ echo "--- [2/2] Running needs_min_segment_length benchmarks (min_segment_length=
 uv run bench \
     -n "$RUNS" \
     --categories needs_min_segment_length \
+    --include-fit both \
     --min-segment-length "$MIN_SEGMENT_LENGTH" \
     -o "$MSL_OUTPUT" \
     "${FORWARD_ARGS[@]}"

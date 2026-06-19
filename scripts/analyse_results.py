@@ -22,17 +22,27 @@ import polars as pl
 from plotly.subplots import make_subplots
 
 # ---------------------------------------------------------------------------
+# Consistent color scheme for packages
+# ---------------------------------------------------------------------------
+PACKAGE_COLORS: dict[str, str] = {
+    "skchange": "#1f77b4",  # blue
+    "ruptures": "#ff7f0e",  # orange
+}
+
+# ---------------------------------------------------------------------------
 # Configuration — change this path when running interactively
 # ---------------------------------------------------------------------------
 project_dir = Path(__file__).parent.parent
-results_path: Path = project_dir / "results/mean_change.parquet"
-
-# TODO: Ensure all the figures share the same color scheme (for ruptures and skchange),
-# e.g. via plotly templates, and consistent axis labels.
+# results_path: Path = project_dir / "results/mean_change.parquet"
+# results_path: Path = project_dir / "results/needs_min_segment_length.parquet"
+results_path: Path = project_dir / "results/pelt_l2.parquet"
 
 if not results_path.exists():
-    print(f"Results file not found: {results_path}")
-    print("Run benchmarks first:  uv run bench -o results/mean_change.parquet")
+    print(f"Error: results file not found at {results_path}")
+    print(
+        "Please set the 'results_path' variable in the script "
+        "to point to your Parquet file."
+    )
     sys.exit(1)
 
 # %% ---------------------------------------------------------------------------
@@ -47,11 +57,17 @@ print(f"Packages: {df['package'].unique().sort().to_list()}")
 print()
 
 # %% ---------------------------------------------------------------------------
-# Plot: mean runtime vs n_samples for each algorithm pair
+# Plot: mean runtime vs n_samples (log scale) for each algorithm pair
 # ---------------------------------------------------------------------------
 
 pairs = df["cpd_algorithm"].unique().sort().to_list()
 packages = df["package"].unique().sort().to_list()
+include_fit_values = df["include_fit"].unique().sort().to_list()
+fit_label = (
+    "fit+predict" if all(include_fit_values) else
+    "predict only" if not any(include_fit_values) else
+    "mixed (fit+predict / predict only)"
+)
 
 n_pairs = len(pairs)
 fig = make_subplots(
@@ -88,64 +104,30 @@ for col_idx, pair in enumerate(pairs, start=1):
                 name=pkg,
                 legendgroup=pkg,
                 showlegend=(col_idx == 1),
+                line=dict(color=PACKAGE_COLORS.get(pkg)),
+                marker=dict(color=PACKAGE_COLORS.get(pkg)),
             ),
             row=1,
             col=col_idx,
         )
 
     fig.update_xaxes(title_text="n_samples", row=1, col=col_idx)
-    fig.update_yaxes(title_text="time (s)", row=1, col=col_idx)
+    fig.update_yaxes(
+        title_text="time (s)",
+        type="log",
+        minor=dict(ticks="inside", showgrid=True),
+        exponentformat="power",
+        showexponent="all",
+        row=1,
+        col=col_idx,
+    )
 
 fig.update_layout(
-    title="Runtime comparison: skchange vs ruptures",
+    title=f"Runtime comparison (log scale): skchange vs ruptures [{fit_label}]",
     height=500,
     width=500 * n_pairs,
 )
 fig.show()
-
-# %% ---------------------------------------------------------------------------
-# Plot: log-scale version (useful when ruptures is orders of magnitude faster)
-# ---------------------------------------------------------------------------
-
-fig_log = make_subplots(
-    rows=1,
-    cols=n_pairs,
-    subplot_titles=pairs,
-    shared_yaxes=False,
-)
-
-for col_idx, pair in enumerate(pairs, start=1):
-    pair_df = df.filter(pl.col("cpd_algorithm") == pair)
-
-    for pkg in packages:
-        pkg_df = (
-            pair_df.filter(pl.col("package") == pkg)
-            .group_by("n_samples")
-            .agg(pl.col("mean_s").mean().alias("mean"))
-            .sort("n_samples")
-        )
-
-        fig_log.add_trace(
-            go.Scatter(
-                x=pkg_df["n_samples"].to_list(),
-                y=pkg_df["mean"].to_list(),
-                mode="lines+markers",
-                name=pkg,
-                legendgroup=pkg,
-                showlegend=(col_idx == 1),
-            ),
-            row=1,
-            col=col_idx,
-        )
-
-    fig_log.update_xaxes(title_text="n_samples", row=1, col=col_idx)
-    fig_log.update_yaxes(title_text="time (s)", type="log", row=1, col=col_idx)
-
-fig_log.update_layout(
-    title="Runtime comparison (log scale): skchange vs ruptures",
-    height=500,
-    width=500 * n_pairs,
-)
 
 # ---------------------------------------------------------------------------
 # Summary table: speedup ratio (skchange / ruptures) per pair × n_samples
@@ -155,37 +137,45 @@ print("=" * 60)
 print("Speedup ratio (skchange mean / ruptures mean)")
 print("=" * 60)
 
-for pair in pairs:
-    pair_df = df.filter(pl.col("cpd_algorithm") == pair)
+for fit_val in include_fit_values:
+    fit_desc = "fit+predict" if fit_val else "predict only"
+    fit_df = df.filter(pl.col("include_fit") == fit_val)
+    fit_pairs = fit_df["cpd_algorithm"].unique().sort().to_list()
 
-    sk = (
-        pair_df.filter(pl.col("package") == "skchange")
-        .group_by("n_samples")
-        .agg(pl.col("mean_s").mean().alias("sk_mean"))
-        .sort("n_samples")
-    )
-    rpt = (
-        pair_df.filter(pl.col("package") == "ruptures")
-        .group_by("n_samples")
-        .agg(pl.col("mean_s").mean().alias("rpt_mean"))
-        .sort("n_samples")
-    )
+    if not fit_pairs:
+        continue
 
-    joined = sk.join(rpt, on="n_samples").with_columns(
-        (pl.col("sk_mean") / pl.col("rpt_mean")).alias("ratio")
-    )
+    print(f"\n  --- {fit_desc} ---")
 
-    print(f"\n  {pair}:")
-    for row in joined.iter_rows(named=True):
-        print(
-            f"    n={row['n_samples']:>6}  "
-            f"skchange={row['sk_mean']:.4f}s  "
-            f"ruptures={row['rpt_mean']:.4f}s  "
-            f"ratio={row['ratio']:.1f}x"
+    for pair in fit_pairs:
+        pair_df = fit_df.filter(pl.col("cpd_algorithm") == pair)
+
+        sk = (
+            pair_df.filter(pl.col("package") == "skchange")
+            .group_by("n_samples")
+            .agg(pl.col("mean_s").mean().alias("sk_mean"))
+            .sort("n_samples")
+        )
+        rpt = (
+            pair_df.filter(pl.col("package") == "ruptures")
+            .group_by("n_samples")
+            .agg(pl.col("mean_s").mean().alias("rpt_mean"))
+            .sort("n_samples")
         )
 
-print()
+        joined = sk.join(rpt, on="n_samples").with_columns(
+            (pl.col("sk_mean") / pl.col("rpt_mean")).alias("ratio")
+        )
 
-fig_log.show()
+        print(f"\n  {pair}:")
+        for row in joined.iter_rows(named=True):
+            print(
+                f"    n={row['n_samples']:>6}  "
+                f"skchange={row['sk_mean']:.4f}s  "
+                f"ruptures={row['rpt_mean']:.4f}s  "
+                f"ratio={row['ratio']:.2f}x"
+            )
+
+print()
 
 # %%

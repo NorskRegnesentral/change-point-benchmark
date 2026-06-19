@@ -85,11 +85,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--include-fit",
-        action=argparse.BooleanOptionalAction,
-        default=True,
+        choices=["yes", "no", "both"],
+        default="yes",
         help=(
-            "Include fit() in the timed operation (default: True). "
-            "Use --no-include-fit to time only predict."
+            "Whether to include fit() in the timed operation. "
+            "'yes' (default): fit+predict. 'no': predict only. "
+            "'both': run each case twice (once with fit, once without)."
         ),
     )
     parser.add_argument(
@@ -108,14 +109,24 @@ def main(argv: list[str] | None = None) -> None:
     warnings.filterwarnings("ignore")
     args = _parse_args(argv)
 
-    cases = collect_cases(
-        packages=args.packages,
-        pairs=args.pairs,
-        categories=args.categories,
-        problem_set=args.problem_set,
-        include_fit=args.include_fit,
-        min_segment_length=args.min_segment_length,
-    )
+    fit_modes: list[bool] = {
+        "yes": [True],
+        "no": [False],
+        "both": [True, False],
+    }[args.include_fit]
+
+    cases = []
+    for include_fit in fit_modes:
+        cases.extend(
+            collect_cases(
+                packages=args.packages,
+                pairs=args.pairs,
+                categories=args.categories,
+                problem_set=args.problem_set,
+                include_fit=include_fit,
+                min_segment_length=args.min_segment_length,
+            )
+        )
 
     if args.list_cases:
         for case in cases:
