@@ -38,8 +38,6 @@ DistributionLike = Union[
 # ---------------------------------------------------------------------------
 # Configuration dataclass
 # ---------------------------------------------------------------------------
-
-
 @dataclass
 class NullDatasetConfig:
     """Configuration for a null-case dataset (no change points in mean).
@@ -147,7 +145,6 @@ class NullDatasetConfig:
     # ------------------------------------------------------------------
     # Generation
     # ------------------------------------------------------------------
-
     def generate(self, rng: np.random.Generator) -> np.ndarray:
         """Draw a null dataset with shape ``(n_samples, n_columns)``.
 

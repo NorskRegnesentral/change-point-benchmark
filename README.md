@@ -9,18 +9,34 @@ primarily [skchange](https://github.com/NorskRegnesentral/skchange) vs.
 ```
 change-point-benchmark/
 ├── pyproject.toml               # uv-managed project config & dependencies
+├── scripts/
+│   ├── run_benchmarks.sh        # run all benchmark categories & save results
+│   └── analyse_results.py       # load results, plot & summarise
 ├── src/
 │   └── change_bench/            # installable "change_bench" package
+│       ├── cli.py               # `uv run bench` entry point
+│       ├── runner.py            # timing harness (prepare/setup/func)
 │       ├── datasets/
 │       │   └── null_case.py     # null-case dataset generators
-│       └── problems/
-│           └── base.py          # BenchmarkProblem dataclass & factories
-├── benchmarks/
-│   ├── conftest.py              # shared pytest-benchmark fixtures
-│   └── bench_null_case.py       # null-case detector benchmarks
+│       ├── problems/
+│       │   └── base.py          # BenchmarkProblem dataclass & factories
+│       └── benchmarks/
+│           ├── registry.py      # pair registry, categories & collect_cases()
+│           └── comparison_pairs/
+│               ├── _common.py             # BenchmarkCase, shared constants & helpers
+│               ├── pelt_l2.py             # PELT + L2 cost
+│               ├── pelt_gaussian.py       # PELT + Gaussian cost (1-D only)
+│               ├── pelt_poisson.py        # PELT + Poisson cost (custom ruptures BaseCost)
+│               ├── pelt_linear_trend.py   # PELT + linear trend cost
+│               ├── moving_window.py       # MovingWindow + CUSUM
+│               ├── moving_window_l2.py    # MovingWindow + L2 (fixed bandwidth)
+│               ├── moving_window_l1.py    # MovingWindow + L1 (fixed bandwidth)
+│               ├── moving_window_rank.py  # MovingWindow + Rank (multivariate only)
+│               └── binseg.py              # Binary Segmentation + CUSUM
 └── tests/
     ├── test_null_datasets.py    # unit tests for dataset generation
-    └── test_problems.py         # unit tests for problem definitions
+    ├── test_problems.py         # unit tests for problem definitions
+    └── test_poisson_cost.py     # verify custom Poisson cost matches skchange
 ```
 
 ## Requirements
@@ -37,11 +53,14 @@ uv sync --dev
 # run the unit tests
 uv run pytest tests/ -v
 
-# run benchmarks (null-case, quick subset)
-uv run pytest benchmarks/ --benchmark-only -v -k "normal_n500"
+# run a quick benchmark (single pair, 2 runs)
+uv run bench --pairs pelt_l2 --runs 2 -o results/pelt_l2.parquet
 
-# run the full benchmark suite and save results
-uv run pytest benchmarks/ --benchmark-only --benchmark-json=results.json -v
+# run all benchmarks via the helper script (writes results/*.parquet)
+./scripts/run_benchmarks.sh --runs 10
+
+# analyse results (loads & concatenates all parquet files in results/)
+uv run scripts/analyse_results.py
 ```
 
 ## Key concepts
@@ -92,10 +111,15 @@ problems = make_null_problems(
 
 ### Benchmarks
 
-Benchmarks use [pytest-benchmark](https://pytest-benchmark.readthedocs.io/) with
-`benchmark.pedantic()` so that **only** the detector fit/predict step is timed —
-data generation and detector construction happen in the `setup` callable and are
-excluded from measurements.
+Benchmarks are organised as **comparison pairs**: each pair contains one
+skchange detector and its equivalent ruptures detector so that timing
+differences are directly attributable to the implementation.
+
+The CLI (`uv run bench`) times each case using a two-phase protocol:
+
+1. `prepare()` — generates data just-in-time (not timed)
+2. `setup(data)` — creates a fresh detector per run (not timed)
+3. `func(det, data)` — the timed fit+predict (or predict-only) operation
 
 skchange detectors are benchmarked via the [`skchange.new_api`](https://github.com/NorskRegnesentral/skchange/tree/main/skchange/new_api)
 submodule, which provides an sklearn-compatible single-series API:
@@ -113,8 +137,22 @@ labels       = det.predict(X)               # dense segment labels (n_samples,)
 ```
 
 ```bash
-uv run pytest benchmarks/bench_null_case.py --benchmark-only -v
+# List all available benchmark cases
+uv run bench --list
+
+# Run specific pairs with multivariate data
+uv run bench --pairs pelt_l2 moving_window_rank --dimensions 1 2 5 --runs 10
 ```
 
 ## Ruptures - Skchange comparison pairs
-| ruptures alg & cost | skchange alg & cost |
+
+| Pair name | ruptures | skchange |
+|-----------|----------|----------|
+| `pelt_l2` | `KernelCPD(kernel="linear")` | `PELT(cost=L2Cost())` |
+| `pelt_1d_gaussian` | `Pelt(model="normal")` | `PELT(cost=GaussianCost())` |
+| `pelt_poisson` | `Pelt(custom_cost=CostPoisson())` | `PELT(cost=PoissonCost())` |
+| `moving_window` | `Window(model="l2")` | `MovingWindow(change_score=CUSUM())` |
+| `moving_window_l2` | `Window(model="l2", width=50)` | `MovingWindow(change_score=CostChangeScore(L2Cost()), bandwidth=25)` |
+| `moving_window_l1` | `Window(model="l1", width=50)` | `MovingWindow(change_score=CostChangeScore(L1Cost()), bandwidth=25)` |
+| `moving_window_rank` | `Window(model="rank", width=50)` | `MovingWindow(change_score=CostChangeScore(RankCost()), bandwidth=25)` |
+| `binseg` | `Binseg(model="l2")` | `SeededBinarySegmentation(change_score=CUSUM())` |
