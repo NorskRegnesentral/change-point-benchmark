@@ -17,7 +17,6 @@ from collections.abc import Callable
 from change_bench.benchmarks.comparison_pairs import (
     BenchmarkCase,
     pair_binseg,
-    pair_moving_window,
     pair_moving_window_l1,
     pair_moving_window_l2,
     pair_moving_window_rank,
@@ -59,8 +58,6 @@ BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
     "pelt_l2": pair_pelt_l2,
     "pelt_1d_gaussian": pair_pelt_1d_gaussian,
     "pelt_poisson": pair_pelt_poisson,
-    # "pelt_linear_trend": pair_pelt_linear_trend,  ## Not actually comparable.
-    "moving_window": pair_moving_window,
     "moving_window_l2": pair_moving_window_l2,
     "moving_window_l1": pair_moving_window_l1,
     "moving_window_rank": pair_moving_window_rank,

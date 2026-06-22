@@ -12,7 +12,11 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from change_bench.datasets.change_case import ChangeDatasetConfig
 from change_bench.datasets.null_case import DistributionLike, NullDatasetConfig
+
+#: Type alias for any dataset config that provides a ``generate(rng)`` method.
+DatasetConfig = NullDatasetConfig | ChangeDatasetConfig
 
 
 @dataclass
@@ -30,7 +34,7 @@ class BenchmarkProblem:
     """
 
     name: str
-    dataset_config: NullDatasetConfig
+    dataset_config: DatasetConfig
     true_changepoints: list[int] = field(default_factory=list)
 
     def generate(self, rng: np.random.Generator) -> np.ndarray:

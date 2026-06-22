@@ -7,7 +7,6 @@ instances (one for skchange, one for ruptures) for every problem it receives.
 
 from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
 from change_bench.benchmarks.comparison_pairs.binseg import pair_binseg
-from change_bench.benchmarks.comparison_pairs.moving_window import pair_moving_window
 from change_bench.benchmarks.comparison_pairs.moving_window_l1 import (
     pair_moving_window_l1,
 )
@@ -33,7 +32,6 @@ __all__ = [
     "BenchmarkCase",
     "CostPoisson",
     "pair_binseg",
-    "pair_moving_window",
     "pair_moving_window_l1",
     "pair_moving_window_l2",
     "pair_moving_window_rank",

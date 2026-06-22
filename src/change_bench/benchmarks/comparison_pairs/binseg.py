@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 import ruptures as rpt
 from skchange.new_api.detectors import SeededBinarySegmentation
-from skchange.new_api.interval_scorers import CUSUM
+from skchange.new_api.interval_scorers import L2Cost, PenalisedScore
 
 from change_bench.benchmarks.comparison_pairs._common import (
     BenchmarkCase,
@@ -18,6 +18,8 @@ from change_bench.benchmarks.comparison_pairs._common import (
     skchange_run,
 )
 from change_bench.problems.base import BenchmarkProblem
+
+JOINT_PENALTY = 10.0
 
 
 def pair_binseg(
@@ -37,7 +39,8 @@ def pair_binseg(
 
         def make_sk_setup(fit=include_fit):
             def setup(data: np.ndarray):
-                det = SeededBinarySegmentation(change_score=CUSUM())
+                fixed_penalty_score = PenalisedScore(L2Cost(), penalty=JOINT_PENALTY)
+                det = SeededBinarySegmentation(change_score=fixed_penalty_score)
                 if not fit:
                     det.fit(data)
                 return (det, data), {}
@@ -56,7 +59,7 @@ def pair_binseg(
         def rpt_func(algo, d, _fit=include_fit):
             if _fit:
                 algo.fit(d)
-            return algo.predict(n_bkps=0)
+            return algo.predict(pen=JOINT_PENALTY)
 
         cases.append(
             BenchmarkCase(
