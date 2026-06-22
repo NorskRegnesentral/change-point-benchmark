@@ -27,6 +27,7 @@ from change_bench.benchmarks.comparison_pairs.pelt_poisson import (
     CostPoisson,
     pair_pelt_poisson,
 )
+from change_bench.benchmarks.comparison_pairs.pelt_rank import pair_pelt_rank
 
 __all__ = [
     "BenchmarkCase",
@@ -39,4 +40,5 @@ __all__ = [
     "pair_pelt_l2",
     "pair_pelt_linear_trend",
     "pair_pelt_poisson",
+    "pair_pelt_rank",
 ]

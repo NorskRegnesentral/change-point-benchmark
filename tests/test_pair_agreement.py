@@ -17,11 +17,12 @@ import pytest
 import ruptures as rpt
 from skchange.new_api.detectors import (
     PELT as SkchangePELT,
+)
+from skchange.new_api.detectors import (
     MovingWindow,
     SeededBinarySegmentation,
 )
 from skchange.new_api.interval_scorers import (
-    CUSUM,
     CostChangeScore,
     GaussianCost,
     L1Cost,
@@ -44,10 +45,12 @@ TEST_PENALTY: float = PELT_PENALTY
 
 #: Penalty for MovingWindow / BinSeg tests.
 #: Must be tuned so that strong mean shifts (5× scale) are detected.
-MW_PENALTY: float = 2.0
+SKCHANGE_MW_PENALTY: float = 20.0
+RUPTURES_MW_PENALTY: float = SKCHANGE_MW_PENALTY
 
 #: Higher penalty for BinSeg (SeededBinarySegmentation is more sensitive).
-BINSEG_PENALTY: float = 15.0
+SKCHANGE_BINSEG_PENALTY: float = 20.0
+RUPTURES_BINSEG_PENALTY: float = SKCHANGE_BINSEG_PENALTY
 
 #: Tolerance (in samples) for MovingWindow/BinSeg change-point location.
 TOLERANCE: int = 10
@@ -64,17 +67,13 @@ def _strip_endpoint(breakpoints: list[int], n_samples: int) -> list[int]:
 
 def _make_normal_change_data(
     rng: np.random.Generator,
-    n_samples: int = 300,
-    changepoints: list[int] | None = None,
-    means: list[float] | None = None,
+    *,
+    n_samples: int,
+    changepoints: list[int],
+    means: list[float],
     n_columns: int = 1,
 ) -> np.ndarray:
     """Generate data with strong mean shifts for testing."""
-    if changepoints is None:
-        changepoints = [100, 200]
-    if means is None:
-        means = [0.0, 5.0, 0.0]
-
     cfg = ChangeDatasetConfig(
         n_samples=n_samples,
         changepoints=changepoints,
@@ -104,8 +103,9 @@ def _assert_changepoints_close(
             f"{msg}Expected changepoint at {e} not found within ±{tolerance}. "
             f"Detected: {detected}, Expected: {expected}"
         )
-    # Allow some spurious detections but not too many
-    max_detections = len(expected) * 2 + 1
+
+    # Do not allow spurious detections:
+    max_detections = len(expected)
     assert len(detected) <= max_detections, (
         f"{msg}Too many detections: {len(detected)} (max {max_detections}). "
         f"Detected: {detected}, Expected: {expected}"
@@ -123,12 +123,17 @@ class TestPeltL2Agreement:
     @pytest.mark.parametrize("n_columns", [1, 3])
     def test_same_changepoints(self, n_columns: int):
         rng = np.random.default_rng(42)
-        data = _make_normal_change_data(rng, n_columns=n_columns)
+        changepoints = [100, 200]
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=changepoints,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
+        )
 
         # skchange
-        sk_det = SkchangePELT(
-            cost=L2Cost(), penalty=TEST_PENALTY, min_segment_length=1
-        )
+        sk_det = SkchangePELT(cost=L2Cost(), penalty=TEST_PENALTY, min_segment_length=1)
         sk_det.fit(data)
         sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
 
@@ -144,16 +149,20 @@ class TestPeltL2Agreement:
     def test_detects_known_changepoints(self):
         """Sanity: both detect the known change points."""
         rng = np.random.default_rng(42)
-        data = _make_normal_change_data(rng)
-
-        sk_det = SkchangePELT(
-            cost=L2Cost(), penalty=TEST_PENALTY, min_segment_length=1
+        changepoints = [100, 200]
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=changepoints,
+            means=[0.0, 5.0, 0.0],
         )
+
+        sk_det = SkchangePELT(cost=L2Cost(), penalty=TEST_PENALTY, min_segment_length=1)
         sk_det.fit(data)
         sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
 
         # With strong signal (mean shift = 5), both should find ~[100, 200]
-        _assert_changepoints_close(sk_cps, [100, 200], tolerance=5)
+        _assert_changepoints_close(sk_cps, changepoints, tolerance=5)
 
 
 class TestPelt1dGaussianAgreement:
@@ -161,7 +170,14 @@ class TestPelt1dGaussianAgreement:
 
     def test_same_changepoints(self):
         rng = np.random.default_rng(42)
-        data = _make_normal_change_data(rng, n_columns=1)
+        changepoints = [100, 200]
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=changepoints,
+            means=[0.0, 5.0, 0.0],
+            n_columns=1,
+        )
 
         # skchange — GaussianCost requires min_segment_length >= 2
         sk_det = SkchangePELT(
@@ -181,7 +197,14 @@ class TestPelt1dGaussianAgreement:
 
     def test_detects_known_changepoints(self):
         rng = np.random.default_rng(42)
-        data = _make_normal_change_data(rng, n_columns=1)
+        changepoints = [100, 200]
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=changepoints,
+            means=[0.0, 5.0, 0.0],
+            n_columns=1,
+        )
 
         sk_det = SkchangePELT(
             cost=GaussianCost(), penalty=TEST_PENALTY, min_segment_length=2
@@ -191,23 +214,25 @@ class TestPelt1dGaussianAgreement:
 
         # GaussianCost models mean+variance, so it may find extra changes.
         # Just verify the true change points are among those detected.
-        for expected_cp in [100, 200]:
+        for expected_cp in changepoints:
             nearby = [cp for cp in sk_cps if abs(cp - expected_cp) <= 5]
             assert len(nearby) >= 1, (
-                f"Expected changepoint near {expected_cp} not found. "
-                f"Detected: {sk_cps}"
+                f"Expected changepoint near {expected_cp} not found. Detected: {sk_cps}"
             )
 
 
 class TestPeltPoissonAgreement:
     """PELT + Poisson cost: skchange vs ruptures Pelt(custom_cost=CostPoisson())."""
 
+    #: Change points used by _make_poisson_data.
+    CHANGEPOINTS = [100, 200]
+
     @staticmethod
     def _make_poisson_data(rng: np.random.Generator) -> np.ndarray:
         """Generate non-negative data with different rates per segment."""
         cfg = ChangeDatasetConfig(
             n_samples=300,
-            changepoints=[100, 200],
+            changepoints=TestPeltPoissonAgreement.CHANGEPOINTS,
             segments=[
                 SegmentParams(loc=1.0, scale=0.5),
                 SegmentParams(loc=10.0, scale=0.5),
@@ -250,71 +275,81 @@ class TestPeltPoissonAgreement:
         sk_det.fit(data)
         sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
 
-        _assert_changepoints_close(sk_cps, [100, 200], tolerance=5)
+        _assert_changepoints_close(sk_cps, self.CHANGEPOINTS, tolerance=5)
 
 
-# ---------------------------------------------------------------------------
-# MovingWindow pair agreement tests — tolerance-based
-# ---------------------------------------------------------------------------
+class TestPeltRankAgreement:
+    """PELT + Rank cost: skchange vs ruptures Pelt(model='rank')."""
 
-
-class TestMovingWindowAgreement:
-    """MovingWindow + CUSUM/L2: skchange vs ruptures Window(model='l2')."""
-
-    @pytest.mark.parametrize("n_columns", [1, 3])
-    def test_both_find_known_changepoints(self, n_columns: int):
+    def test_same_changepoints(self):
         rng = np.random.default_rng(42)
-        expected_cps = [100, 200]
+        changepoints = [100, 200]
+        n_columns = 3
         data = _make_normal_change_data(
-            rng, n_samples=300, n_columns=n_columns
+            rng,
+            n_samples=300,
+            changepoints=changepoints,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
         )
-        bw = MW_BANDWIDTH
 
-        # skchange — use PenalisedScore with explicit penalty
-        sk_det = MovingWindow(
-            change_score=PenalisedScore(CUSUM(), penalty=MW_PENALTY),
-            bandwidth=bw,
+        # skchange — RankCost requires min_segment_length >= 2
+        sk_det = SkchangePELT(
+            cost=RankCost(), penalty=TEST_PENALTY, min_segment_length=2
         )
         sk_det.fit(data)
         sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
 
         # ruptures
-        rpt_algo = rpt.Window(model="l2", width=2 * bw, min_size=1, jump=1)
+        rpt_algo = rpt.Pelt(model="rank", min_size=2, jump=1)
         rpt_algo.fit(data)
-        rpt_cps = sorted(
-            _strip_endpoint(rpt_algo.predict(pen=MW_PENALTY), len(data))
+        rpt_cps = sorted(_strip_endpoint(rpt_algo.predict(pen=TEST_PENALTY), len(data)))
+
+        assert sk_cps == rpt_cps, (
+            f"PELT Rank disagreement: skchange={sk_cps}, ruptures={rpt_cps}"
         )
 
-        _assert_changepoints_close(
-            sk_cps,
-            expected_cps,
-            tolerance=TOLERANCE,
-            msg=f"skchange MovingWindow CUSUM (p={n_columns}): ",
+    def test_detects_known_changepoints(self):
+        rng = np.random.default_rng(42)
+        changepoints = [100, 200]
+        n_columns = 3
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=changepoints,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
         )
-        _assert_changepoints_close(
-            rpt_cps,
-            expected_cps,
-            tolerance=TOLERANCE,
-            msg=f"ruptures Window L2 (p={n_columns}): ",
+
+        sk_det = SkchangePELT(
+            cost=RankCost(), penalty=TEST_PENALTY, min_segment_length=2
         )
+        sk_det.fit(data)
+        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+
+        _assert_changepoints_close(sk_cps, changepoints, tolerance=5)
 
 
 class TestMovingWindowL2Agreement:
-    """MovingWindow + L2Cost: skchange vs ruptures Window(model='l2')."""
+    """MovingWindow + L2 Change Score: skchange vs ruptures Window(model='l2')."""
 
     @pytest.mark.parametrize("n_columns", [1, 3])
     def test_both_find_known_changepoints(self, n_columns: int):
         rng = np.random.default_rng(42)
         expected_cps = [100, 200]
         data = _make_normal_change_data(
-            rng, n_samples=300, n_columns=n_columns
+            rng,
+            n_samples=300,
+            changepoints=expected_cps,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
         )
         bw = MW_BANDWIDTH
 
         # skchange
         sk_det = MovingWindow(
             change_score=PenalisedScore(
-                CostChangeScore(L2Cost()), penalty=MW_PENALTY
+                CostChangeScore(L2Cost()), penalty=SKCHANGE_MW_PENALTY
             ),
             bandwidth=bw,
         )
@@ -325,7 +360,7 @@ class TestMovingWindowL2Agreement:
         rpt_algo = rpt.Window(model="l2", width=2 * bw, min_size=1, jump=1)
         rpt_algo.fit(data)
         rpt_cps = sorted(
-            _strip_endpoint(rpt_algo.predict(pen=MW_PENALTY), len(data))
+            _strip_endpoint(rpt_algo.predict(pen=RUPTURES_MW_PENALTY), len(data))
         )
 
         _assert_changepoints_close(
@@ -343,21 +378,25 @@ class TestMovingWindowL2Agreement:
 
 
 class TestMovingWindowL1Agreement:
-    """MovingWindow + L1Cost: skchange vs ruptures Window(model='l1')."""
+    """MovingWindow + L1 Change Score: skchange vs ruptures Window(model='l1')."""
 
     @pytest.mark.parametrize("n_columns", [1, 3])
     def test_both_find_known_changepoints(self, n_columns: int):
         rng = np.random.default_rng(42)
         expected_cps = [100, 200]
         data = _make_normal_change_data(
-            rng, n_samples=300, n_columns=n_columns
+            rng,
+            n_samples=300,
+            changepoints=expected_cps,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
         )
         bw = MW_BANDWIDTH
 
         # skchange
         sk_det = MovingWindow(
             change_score=PenalisedScore(
-                CostChangeScore(L1Cost()), penalty=MW_PENALTY
+                CostChangeScore(L1Cost()), penalty=SKCHANGE_MW_PENALTY
             ),
             bandwidth=bw,
         )
@@ -368,7 +407,7 @@ class TestMovingWindowL1Agreement:
         rpt_algo = rpt.Window(model="l1", width=2 * bw, min_size=1, jump=1)
         rpt_algo.fit(data)
         rpt_cps = sorted(
-            _strip_endpoint(rpt_algo.predict(pen=MW_PENALTY), len(data))
+            _strip_endpoint(rpt_algo.predict(pen=RUPTURES_MW_PENALTY), len(data))
         )
 
         _assert_changepoints_close(
@@ -386,21 +425,25 @@ class TestMovingWindowL1Agreement:
 
 
 class TestMovingWindowRankAgreement:
-    """MovingWindow + RankCost: skchange vs ruptures Window(model='rank')."""
+    """MovingWindow + Rank Change Score: skchange vs ruptures Window(model='rank')."""
 
     def test_both_find_known_changepoints_multivariate(self):
         rng = np.random.default_rng(42)
         expected_cps = [100, 200]
         n_columns = 3
         data = _make_normal_change_data(
-            rng, n_samples=300, n_columns=n_columns
+            rng,
+            n_samples=300,
+            changepoints=expected_cps,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
         )
         bw = MW_BANDWIDTH
 
         # skchange
         sk_det = MovingWindow(
             change_score=PenalisedScore(
-                CostChangeScore(RankCost()), penalty=MW_PENALTY
+                CostChangeScore(RankCost()), penalty=SKCHANGE_MW_PENALTY
             ),
             bandwidth=bw,
         )
@@ -411,7 +454,7 @@ class TestMovingWindowRankAgreement:
         rpt_algo = rpt.Window(model="rank", width=2 * bw, min_size=1, jump=1)
         rpt_algo.fit(data)
         rpt_cps = sorted(
-            _strip_endpoint(rpt_algo.predict(pen=MW_PENALTY), len(data))
+            _strip_endpoint(rpt_algo.predict(pen=RUPTURES_MW_PENALTY), len(data))
         )
 
         _assert_changepoints_close(
@@ -434,19 +477,25 @@ class TestMovingWindowRankAgreement:
 
 
 class TestBinSegAgreement:
-    """SeededBinarySegmentation + CUSUM vs ruptures Binseg(model='l2')."""
+    """SeededBinarySegmentation + L2 Change Score vs ruptures Binseg(model='l2')."""
 
     @pytest.mark.parametrize("n_columns", [1, 3])
     def test_both_find_known_changepoints(self, n_columns: int):
         rng = np.random.default_rng(42)
         expected_cps = [100, 200]
         data = _make_normal_change_data(
-            rng, n_samples=300, n_columns=n_columns
+            rng,
+            n_samples=300,
+            changepoints=expected_cps,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
         )
 
         # skchange
         sk_det = SeededBinarySegmentation(
-            change_score=PenalisedScore(CUSUM(), penalty=BINSEG_PENALTY),
+            change_score=PenalisedScore(
+                CostChangeScore(L2Cost()), penalty=SKCHANGE_BINSEG_PENALTY
+            ),
         )
         sk_det.fit(data)
         sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
@@ -455,18 +504,18 @@ class TestBinSegAgreement:
         rpt_algo = rpt.Binseg(model="l2", min_size=1, jump=1)
         rpt_algo.fit(data)
         rpt_cps = sorted(
-            _strip_endpoint(rpt_algo.predict(pen=BINSEG_PENALTY), len(data))
+            _strip_endpoint(rpt_algo.predict(pen=RUPTURES_BINSEG_PENALTY), len(data))
         )
 
         _assert_changepoints_close(
             sk_cps,
             expected_cps,
             tolerance=TOLERANCE,
-            msg=f"skchange SeededBinSeg CUSUM (p={n_columns}): ",
+            msg=f"skchange SeededBinSeg L2 Change Score (p={n_columns}): ",
         )
         _assert_changepoints_close(
             rpt_cps,
             expected_cps,
             tolerance=TOLERANCE,
-            msg=f"ruptures Binseg L2 (p={n_columns}): ",
+            msg=f"ruptures Binseg L2 Change Score (p={n_columns}): ",
         )
