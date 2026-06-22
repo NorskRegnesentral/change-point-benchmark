@@ -34,9 +34,20 @@ from change_bench.problems.base import BenchmarkProblem, make_null_problems
 small_n_samples_list = [100, 250, 500, 750, 1000]
 large_n_samples_list = [1500, 2500, 5000, 7500, 10_000]
 
+#: All supported null-case distributions.
+ALL_DISTRIBUTIONS: list[str] = ["normal", "t", "gamma", "laplace", "exponential"]
+
+#: Default distributions per problem set.
+DEFAULT_DISTRIBUTIONS: dict[str, list[str]] = {
+    "small": ["normal"],
+    "full": ALL_DISTRIBUTIONS,
+}
+
 
 def _make_problems(
-    problem_set: str, n_columns_list: list[int]
+    problem_set: str,
+    n_columns_list: list[int],
+    distributions: list[str] | None = None,
 ) -> list[BenchmarkProblem]:
     """Create problem battery with given dimensions."""
     n_samples = (
@@ -44,9 +55,11 @@ def _make_problems(
         if problem_set == "small"
         else small_n_samples_list + large_n_samples_list
     )
+    if distributions is None:
+        distributions = DEFAULT_DISTRIBUTIONS.get(problem_set, ALL_DISTRIBUTIONS)
     return make_null_problems(
         n_samples_list=n_samples,
-        distributions=["normal", "t", "gamma", "laplace", "exponential"],
+        distributions=distributions,
         scale=1.0,
         n_columns_list=n_columns_list,
     )
@@ -101,6 +114,7 @@ def collect_cases(
     include_fit: bool = True,
     min_segment_length: int = 1,
     dimensions: list[int] | None = None,
+    distributions: list[str] | None = None,
 ) -> list[BenchmarkCase]:
     """Collect benchmark cases, optionally filtered by package, pair, or category.
 
@@ -127,12 +141,18 @@ def collect_cases(
     dimensions:
         List of data dimensionalities (number of columns) to benchmark.
         Default: ``[1]``.
+    distributions:
+        List of distribution names for the null-case data.  ``None`` uses
+        the default for the chosen *problem_set* (``"normal"`` only for
+        ``"small"``, all distributions for ``"full"``).
     """
     if dimensions is None:
         dimensions = [1]
 
     # Generate problems with all requested dimensions
-    problems = _make_problems(problem_set, n_columns_list=dimensions)
+    problems = _make_problems(
+        problem_set, n_columns_list=dimensions, distributions=distributions
+    )
 
     # Resolve which pairs to run
     selected_pairs: list[str] = []

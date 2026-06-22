@@ -17,6 +17,7 @@ from pathlib import Path
 import polars as pl
 
 from change_bench.benchmarks.registry import (
+    ALL_DISTRIBUTIONS,
     BENCHMARK_PAIRS,
     PAIR_CATEGORIES,
     collect_cases,
@@ -113,6 +114,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "will only run with p=1 regardless of this setting."
         ),
     )
+    parser.add_argument(
+        "--distributions",
+        nargs="+",
+        default=None,
+        help=(
+            f"Null-case distributions to benchmark. Available: {ALL_DISTRIBUTIONS}. "
+            "Omit to use the default for the chosen problem set "
+            "(normal only for 'small', all for 'full')."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -137,6 +148,7 @@ def main(argv: list[str] | None = None) -> None:
                 include_fit=include_fit,
                 min_segment_length=args.min_segment_length,
                 dimensions=args.dimensions,
+                distributions=args.distributions,
             )
         )
 
