@@ -11,8 +11,8 @@
 #
 # Recognised flags (consumed by this script, NOT forwarded to bench):
 #   --min-segment-length N   min_segment_length for needs_min_segment_length
-#                            pairs (default: 3)
-#   --dimensions N [N ...]   data dimensionalities to benchmark (default: 1 2 5 10)
+#                            pairs (default: max(dimensions) + 1)
+#   --dimensions N [N ...]   data dimensionalities to benchmark (default: 1 2 5)
 #
 # All other arguments are forwarded to both `uv run bench` invocations.
 
@@ -28,7 +28,7 @@ mkdir -p "$RESULTS_DIR"
 # Parse script-specific flags; collect remaining args to forward
 # ---------------------------------------------------------------------------
 RUNS=10
-MIN_SEGMENT_LENGTH=3
+MIN_SEGMENT_LENGTH=0  # 0 means auto: max(DIMENSIONS) + 1
 DIMENSIONS=(1 2 5)
 FORWARD_ARGS=()
 
@@ -56,6 +56,18 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Compute MIN_SEGMENT_LENGTH if not explicitly set (must be > max dimension for
+# rank-based costs).
+if [[ "$MIN_SEGMENT_LENGTH" -eq 0 ]]; then
+    MAX_DIM=0
+    for d in "${DIMENSIONS[@]}"; do
+        if [[ "$d" -gt "$MAX_DIM" ]]; then
+            MAX_DIM="$d"
+        fi
+    done
+    MIN_SEGMENT_LENGTH=$((MAX_DIM + 1))
+fi
 
 MEAN_CHANGE_OUTPUT="$RESULTS_DIR/mean_change.parquet"
 MSL_OUTPUT="$RESULTS_DIR/needs_min_segment_length.parquet"

@@ -16,6 +16,7 @@ from pathlib import Path
 
 import polars as pl
 
+from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
 from change_bench.benchmarks.registry import (
     ALL_DISTRIBUTIONS,
     BENCHMARK_PAIRS,
@@ -137,7 +138,7 @@ def main(argv: list[str] | None = None) -> None:
         "both": [True, False],
     }[args.include_fit]
 
-    cases = []
+    cases: list[BenchmarkCase] = []
     for include_fit in fit_modes:
         cases.extend(
             collect_cases(
@@ -170,7 +171,8 @@ def main(argv: list[str] | None = None) -> None:
 
     for i, case in enumerate(cases, 1):
         label = f"[{case.package}] {case.name}"
-        print(f"  ({i}/{len(cases)}) {label} ...", end=" ", flush=True)
+        dims = f"n={case.n_samples}, p={case.data_dimension}"
+        print(f"  ({i}/{len(cases)}) {label} ({dims}) ...", end=" ", flush=True)
 
         res = run_benchmark(
             package=case.package,

@@ -31,8 +31,9 @@ from change_bench.problems.base import BenchmarkProblem, make_null_problems
 # Problem batteries
 # ---------------------------------------------------------------------------
 
-small_n_samples_list = [100, 250, 500, 750, 1000]
-large_n_samples_list = [1500, 2500, 5000, 7500, 10_000]
+# small_n_samples_list = [100, 250, 500, 750, 1000]
+small_n_samples_list = [100, 250, 500, 750]
+large_n_samples_list = [1000, 1500, 2500, 5000]
 
 #: All supported null-case distributions.
 ALL_DISTRIBUTIONS: list[str] = ["normal", "t", "gamma", "laplace", "exponential"]
@@ -98,10 +99,10 @@ PAIR_CATEGORIES: dict[str, list[str]] = {
     "needs_min_segment_length": [
         "pelt_1d_gaussian",
         # "pelt_linear_trend",
+        "pelt_rank",
     ],
     "multivariate": [
         "moving_window_rank",
-        "pelt_rank",
     ],
 }
 

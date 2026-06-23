@@ -14,6 +14,7 @@ Or interactively in an editor / REPL — just set ``results_path`` below.
 
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -31,9 +32,15 @@ PACKAGE_COLORS: dict[str, str] = {
 
 #: Line dash style per fit mode
 FIT_DASH: dict[bool, str] = {
-    True: "solid",       # fit+predict
-    False: "dash",       # predict only
+    True: "solid",  # fit+predict
+    False: "dash",  # predict only
 }
+
+# ---------------------------------------------------------------------------
+# Toggle: which fit modes to include in the analysis
+# Set to [True] for fit+predict only, [False] for predict only, or both.
+# ---------------------------------------------------------------------------
+INCLUDE_FIT_VALUES: list[bool] = [True]
 
 # ---------------------------------------------------------------------------
 # Configuration — change this path when running interactively
@@ -71,7 +78,7 @@ print()
 
 pairs = df["cpd_algorithm"].unique().sort().to_list()
 packages = df["package"].unique().sort().to_list()
-include_fit_values = df["include_fit"].unique().sort().to_list()
+include_fit_values = INCLUDE_FIT_VALUES
 dimensions = df["data_dimension"].unique().sort().to_list()
 
 for dim in dimensions:
@@ -82,16 +89,24 @@ for dim in dimensions:
     if n_pairs == 0:
         continue
 
+    max_cols = 3
+    n_cols = min(n_pairs, max_cols)
+    n_rows = math.ceil(n_pairs / n_cols)
+
     fig = make_subplots(
-        rows=1,
-        cols=n_pairs,
+        rows=n_rows,
+        cols=n_cols,
         subplot_titles=dim_pairs,
         shared_yaxes=False,
+        vertical_spacing=0.25 / n_rows if n_rows > 1 else 0.15,
     )
 
-    for col_idx, pair in enumerate(dim_pairs, start=1):
+    shown_legends: set[str] = set()
+
+    for subplot_idx, pair in enumerate(dim_pairs):
+        row_idx = subplot_idx // n_cols + 1
+        col_idx = subplot_idx % n_cols + 1
         pair_df = dim_df.filter(pl.col("cpd_algorithm") == pair)
-        shown_legends: set[str] = set()
 
         for fit_val in include_fit_values:
             fit_suffix = "fit+predict" if fit_val else "predict only"
@@ -100,8 +115,7 @@ for dim in dimensions:
             for pkg in packages:
                 pkg_df = (
                     pair_df.filter(
-                        (pl.col("package") == pkg)
-                        & (pl.col("include_fit") == fit_val)
+                        (pl.col("package") == pkg) & (pl.col("include_fit") == fit_val)
                     )
                     .group_by("n_samples")
                     .agg(
@@ -118,9 +132,14 @@ for dim in dimensions:
                 means = pkg_df["mean"].to_list()
                 stds = pkg_df["std"].to_list()
 
-                legend_name = f"{pkg} ({fit_suffix})"
+                legend_name = pkg
                 show_legend = legend_name not in shown_legends
                 shown_legends.add(legend_name)
+
+                custom_hover = [
+                    f"n={n}, {m:.1e} ± {s:.1e} s"
+                    for n, m, s in zip(n_samples, means, stds)
+                ]
 
                 fig.add_trace(
                     go.Scatter(
@@ -133,30 +152,32 @@ for dim in dimensions:
                         showlegend=show_legend,
                         line=dict(color=PACKAGE_COLORS.get(pkg), dash=dash),
                         marker=dict(color=PACKAGE_COLORS.get(pkg)),
+                        text=custom_hover,
+                        hoverinfo="text+name",
                     ),
-                    row=1,
+                    row=row_idx,
                     col=col_idx,
                 )
 
-        fig.update_xaxes(title_text="n_samples", row=1, col=col_idx)
+        fig.update_xaxes(title_text="n_samples", row=row_idx, col=col_idx)
         fig.update_yaxes(
             title_text="time (s)",
             type="log",
             minor=dict(ticks="inside", showgrid=True),
             exponentformat="power",
             showexponent="all",
-            row=1,
+            row=row_idx,
             col=col_idx,
         )
 
     fig.update_layout(
         title=f"Runtime comparison (log scale): skchange vs ruptures — p={dim}",
-        height=500,
-        width=500 * n_pairs,
+        height=400 * n_rows,
+        width=500 * n_cols,
     )
     fig.show()
 
-# ---------------------------------------------------------------------------
+# %% ---------------------------------------------------------------------------
 # Summary table: speedup ratio (skchange / ruptures) per pair × n_samples
 # ---------------------------------------------------------------------------
 
@@ -166,9 +187,9 @@ print("=" * 60)
 
 for dim in dimensions:
     dim_df = df.filter(pl.col("data_dimension") == dim)
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  Data dimension p={dim}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     for fit_val in include_fit_values:
         fit_desc = "fit+predict" if fit_val else "predict only"
