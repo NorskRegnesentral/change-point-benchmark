@@ -43,6 +43,15 @@ FIT_DASH: dict[bool, str] = {
 INCLUDE_FIT_VALUES: list[bool] = [True]
 
 # ---------------------------------------------------------------------------
+# Toggle: metric to plot and report
+# "ski-jump-mean" — uses ski_jump_mean_s/ski_jump_std_s (mean ± std after
+#                    removing the fastest and slowest run)
+# "min"           — uses min_s (best-of-N, no error bars)
+# ---------------------------------------------------------------------------
+# METRIC: str = "ski-jump-mean"  # "ski-jump-mean" or "min"
+METRIC: str = "min"  # "ski-jump-mean" or "min"
+
+# ---------------------------------------------------------------------------
 # Configuration — change this path when running interactively
 # ---------------------------------------------------------------------------
 project_dir = Path(__file__).parent.parent
@@ -113,39 +122,54 @@ for dim in dimensions:
             dash = FIT_DASH.get(fit_val, "solid")
 
             for pkg in packages:
-                pkg_df = (
-                    pair_df.filter(
-                        (pl.col("package") == pkg) & (pl.col("include_fit") == fit_val)
-                    )
-                    .group_by("n_samples")
-                    .agg(
-                        pl.col("mean_s").mean().alias("mean"),
-                        pl.col("std_s").mean().alias("std"),
-                    )
-                    .sort("n_samples")
+                base_df = pair_df.filter(
+                    (pl.col("package") == pkg) & (pl.col("include_fit") == fit_val)
                 )
+
+                if METRIC == "min":
+                    pkg_df = (
+                        base_df.group_by("n_samples")
+                        .agg(pl.col("min_s").min().alias("value"))
+                        .sort("n_samples")
+                    )
+                else:
+                    pkg_df = (
+                        base_df.group_by("n_samples")
+                        .agg(
+                            pl.col("ski_jump_mean_s").mean().alias("value"),
+                            pl.col("ski_jump_std_s").mean().alias("std"),
+                        )
+                        .sort("n_samples")
+                    )
 
                 if pkg_df.is_empty():
                     continue
 
                 n_samples = pkg_df["n_samples"].to_list()
-                means = pkg_df["mean"].to_list()
-                stds = pkg_df["std"].to_list()
+                values = pkg_df["value"].to_list()
 
                 legend_name = pkg
                 show_legend = legend_name not in shown_legends
                 shown_legends.add(legend_name)
 
-                custom_hover = [
-                    f"n={n}, {m:.1e} ± {s:.1e} s"
-                    for n, m, s in zip(n_samples, means, stds)
-                ]
+                if METRIC == "min":
+                    error_y = None
+                    custom_hover = [
+                        f"n={n}, min={v:.1e} s" for n, v in zip(n_samples, values)
+                    ]
+                else:
+                    stds = pkg_df["std"].to_list()
+                    error_y = dict(type="data", array=stds, visible=True)
+                    custom_hover = [
+                        f"n={n}, {v:.1e} ± {s:.1e} s"
+                        for n, v, s in zip(n_samples, values, stds)
+                    ]
 
                 fig.add_trace(
                     go.Scatter(
                         x=n_samples,
-                        y=means,
-                        error_y=dict(type="data", array=stds, visible=True),
+                        y=values,
+                        error_y=error_y,
                         mode="lines+markers",
                         name=legend_name,
                         legendgroup=legend_name,
@@ -170,8 +194,9 @@ for dim in dimensions:
             col=col_idx,
         )
 
+    metric_label = "min runtime" if METRIC == "min" else "ski-jump-mean ± std"
     fig.update_layout(
-        title=f"Runtime comparison (log scale): skchange vs ruptures — p={dim}",
+        title=f"Runtime comparison ({metric_label}, log scale): skchange vs ruptures — p={dim}",
         height=400 * n_rows,
         width=500 * n_cols,
     )
@@ -181,8 +206,12 @@ for dim in dimensions:
 # Summary table: speedup ratio (skchange / ruptures) per pair × n_samples
 # ---------------------------------------------------------------------------
 
+metric_col = "min_s" if METRIC == "min" else "ski_jump_mean_s"
+metric_label_summary = "min" if METRIC == "min" else "ski-jump-mean"
 print("=" * 60)
-print("Speedup ratio (skchange mean / ruptures mean)")
+print(
+    f"Speedup ratio (ruptures {metric_label_summary} / skchange {metric_label_summary})"
+)
 print("=" * 60)
 
 for dim in dimensions:
@@ -204,30 +233,36 @@ for dim in dimensions:
         for pair in fit_pairs:
             pair_df = fit_df.filter(pl.col("cpd_algorithm") == pair)
 
+            agg_expr = (
+                pl.col(metric_col).min()
+                if METRIC == "min"
+                else pl.col(metric_col).mean()
+            )
+
             sk = (
                 pair_df.filter(pl.col("package") == "skchange")
                 .group_by("n_samples")
-                .agg(pl.col("mean_s").mean().alias("sk_mean"))
+                .agg(agg_expr.alias("sk_val"))
                 .sort("n_samples")
             )
             rpt = (
                 pair_df.filter(pl.col("package") == "ruptures")
                 .group_by("n_samples")
-                .agg(pl.col("mean_s").mean().alias("rpt_mean"))
+                .agg(agg_expr.alias("rpt_val"))
                 .sort("n_samples")
             )
 
             joined = sk.join(rpt, on="n_samples").with_columns(
-                (pl.col("sk_mean") / pl.col("rpt_mean")).alias("ratio")
+                (pl.col("rpt_val") / pl.col("sk_val")).alias("rpt_sk_ratio")
             )
 
             print(f"\n  {pair}:")
             for row in joined.iter_rows(named=True):
                 print(
                     f"    n={row['n_samples']:>6}  "
-                    f"skchange={row['sk_mean']:.4f}s  "
-                    f"ruptures={row['rpt_mean']:.4f}s  "
-                    f"ratio={row['ratio']:.2f}x"
+                    f"skchange={row['sk_val']:.4f}s  "
+                    f"ruptures={row['rpt_val']:.4f}s  "
+                    f"rpt_over_sk_ratio={row['rpt_sk_ratio']:.3f}x"
                 )
 
 print()

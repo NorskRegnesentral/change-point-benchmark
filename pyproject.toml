@@ -11,10 +11,11 @@ dependencies = [
     "numpy>=2.0",
     "scipy>=1.13",
     "ruptures>=1.1",
-    "skchange @ git+https://github.com/NorskRegnesentral/skchange.git@main",
+    "skchange[numba] @ git+https://github.com/NorskRegnesentral/skchange.git@main",
     "polars>=1.41.2",
     "ipykernel>=7.3.0",
     "nbformat>=5.10.4",
+    "pyinstrument>=5.1.2",
 ]
 
 [dependency-groups]

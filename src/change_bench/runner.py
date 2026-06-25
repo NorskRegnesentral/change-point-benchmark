@@ -10,7 +10,6 @@ from __future__ import annotations
 import gc
 import statistics
 import time
-import warnings
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -46,6 +45,22 @@ class BenchmarkResult:
     def min(self) -> float:
         return min(self.times)
 
+    @property
+    def ski_jump_mean(self) -> float:
+        """Mean after removing fastest and slowest run."""
+        if len(self.times) <= 2:
+            return self.mean
+        trimmed = sorted(self.times)[1:-1]
+        return statistics.mean(trimmed)
+
+    @property
+    def ski_jump_std(self) -> float:
+        """Std after removing fastest and slowest run."""
+        if len(self.times) <= 2:
+            return self.std
+        trimmed = sorted(self.times)[1:-1]
+        return statistics.stdev(trimmed) if len(trimmed) > 1 else 0.0
+
     def as_dict(self) -> dict:
         return {
             "package": self.package,
@@ -61,6 +76,8 @@ class BenchmarkResult:
             "std_s": self.std,
             "median_s": self.median,
             "min_s": self.min,
+            "ski_jump_mean_s": self.ski_jump_mean,
+            "ski_jump_std_s": self.ski_jump_std,
         }
 
 

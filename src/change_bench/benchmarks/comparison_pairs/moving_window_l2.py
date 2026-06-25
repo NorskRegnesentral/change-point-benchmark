@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 import ruptures as rpt
 from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import CostChangeScore, L2Cost, PenalisedScore
+from skchange.new_api.interval_scorers import CUSUM, PenalisedScore
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,
@@ -42,7 +42,7 @@ def pair_moving_window_l2(
         def make_sk_setup(bandwidth=bw, fit=include_fit):
             def setup(data: np.ndarray):
                 fixed_penalty_score = PenalisedScore(
-                    CostChangeScore(L2Cost()), penalty=JOINT_MW_L2_PENALTY
+                    CUSUM(), penalty=JOINT_MW_L2_PENALTY
                 )
                 det = MovingWindow(
                     change_score=fixed_penalty_score, bandwidth=bandwidth

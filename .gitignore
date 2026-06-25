@@ -222,3 +222,6 @@ __marimo__/
 
 # Benchmark results
 small_results/
+
+# Ignore .html files:
+*.html
