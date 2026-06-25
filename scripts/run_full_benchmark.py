@@ -24,14 +24,13 @@ from pathlib import Path
 import polars as pl
 
 from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
-from change_bench.benchmarks.registry import collect_cases
+from change_bench.benchmarks.registry import Pair, collect_cases
 from change_bench.runner import run_benchmark
+
 
 # ============================================================================
 # Configuration
 # ============================================================================
-
-
 @dataclass
 class Job:
     """A group of benchmark cases to run with shared settings.
@@ -55,7 +54,7 @@ class Job:
         ``"small"`` or ``"full"`` problem battery.
     """
 
-    pairs: list[str]
+    pairs: list[Pair]
     dimensions: list[int]
     output_name: str
     min_segment_length: int = 1
@@ -88,19 +87,24 @@ OVERRIDE_RESULTS: bool = False
 # ---------------------------------------------------------------------------
 JOBS: list[Job] = [
     Job(
-        pairs=["pelt_l2", "moving_window_l2", "moving_window_l1", "binseg"],
+        pairs=[
+            Pair.PELT_L2,
+            Pair.MOVING_WINDOW_L2,
+            Pair.MOVING_WINDOW_L1,
+            Pair.BINSEG,
+        ],
         dimensions=[1, 2, 5],
         min_segment_length=1,
         output_name="mean_change",
     ),
     Job(
-        pairs=["pelt_1d_gaussian", "pelt_rank"],
+        pairs=[Pair.PELT_1D_GAUSSIAN, Pair.PELT_RANK],
         dimensions=[1, 2, 5],
         min_segment_length=6,  # must be > max(dimensions) for rank costs
         output_name="needs_min_segment_length",
     ),
     Job(
-        pairs=["moving_window_rank"],
+        pairs=[Pair.MOVING_WINDOW_RANK],
         dimensions=[2, 5],
         min_segment_length=6,  # must be > max(dimensions) for rank costs
         output_name="multivariate",
@@ -178,7 +182,7 @@ def _run_job(job: Job, job_idx: int, total_jobs: int) -> None:
 
     print(
         f"--- [{job_idx}/{total_jobs}] {job.output_name} "
-        f"({len(cases)} cases, pairs={job.pairs}) ---"
+        f"({len(cases)} cases, pairs={[p.value for p in job.pairs]}) ---"
     )
 
     # Load existing results when not overriding.

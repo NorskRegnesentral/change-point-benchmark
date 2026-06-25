@@ -55,12 +55,9 @@ import sys
 import warnings
 from pathlib import Path
 
-# Ensure the package is importable when running from the repo root.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
 from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
 from change_bench.benchmarks.registry import (
-    BENCHMARK_PAIRS,
+    Pair,
     collect_cases,
 )
 
@@ -72,7 +69,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--pair",
         required=True,
-        choices=sorted(BENCHMARK_PAIRS),
+        choices=[p.value for p in Pair],
         help="Comparison pair to profile.",
     )
     parser.add_argument(
@@ -171,7 +168,7 @@ def main() -> None:
     # Use the same collect_cases pipeline as the CLI benchmark runner.
     cases = collect_cases(
         packages=[args.package],
-        pairs=[args.pair],
+        pairs=[Pair(args.pair)],
         problem_set="small",
         include_fit=include_fit,
         dimensions=[args.dimensions],

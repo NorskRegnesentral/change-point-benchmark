@@ -19,8 +19,8 @@ import polars as pl
 from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
 from change_bench.benchmarks.registry import (
     ALL_DISTRIBUTIONS,
-    BENCHMARK_PAIRS,
     PAIR_CATEGORIES,
+    Pair,
     collect_cases,
 )
 from change_bench.runner import run_benchmark
@@ -52,7 +52,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         nargs="+",
         default=None,
         help=(
-            f"Comparison pairs to run. Available: {sorted(BENCHMARK_PAIRS)}. "
+            f"Comparison pairs to run. Available: {sorted(p.value for p in Pair)}. "
             "Omit to run all pairs."
         ),
     )
@@ -138,12 +138,16 @@ def main(argv: list[str] | None = None) -> None:
         "both": [True, False],
     }[args.include_fit]
 
+    parsed_pairs: list[Pair] | None = (
+        [Pair(p) for p in args.pairs] if args.pairs else None
+    )
+
     cases: list[BenchmarkCase] = []
     for include_fit in fit_modes:
         cases.extend(
             collect_cases(
                 packages=args.packages,
-                pairs=args.pairs,
+                pairs=parsed_pairs,
                 categories=args.categories,
                 problem_set=args.problem_set,
                 include_fit=include_fit,

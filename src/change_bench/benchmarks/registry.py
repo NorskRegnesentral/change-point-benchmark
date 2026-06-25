@@ -13,6 +13,7 @@ Run via the CLI::
 from __future__ import annotations
 
 from collections.abc import Callable
+from enum import StrEnum
 
 from change_bench.benchmarks.comparison_pairs import (
     BenchmarkCase,
@@ -26,6 +27,25 @@ from change_bench.benchmarks.comparison_pairs import (
     pair_pelt_rank,
 )
 from change_bench.problems.base import BenchmarkProblem, make_null_problems
+
+# ---------------------------------------------------------------------------
+# Pair enum — the canonical identifier for every comparison pair.
+# Uses StrEnum so values work as dict keys and CLI arguments directly.
+# ---------------------------------------------------------------------------
+
+
+class Pair(StrEnum):
+    """Available comparison pairs."""
+
+    PELT_L2 = "pelt_l2"
+    PELT_1D_GAUSSIAN = "pelt_1d_gaussian"
+    PELT_POISSON = "pelt_poisson"
+    PELT_RANK = "pelt_rank"
+    MOVING_WINDOW_L2 = "moving_window_l2"
+    MOVING_WINDOW_L1 = "moving_window_l1"
+    MOVING_WINDOW_RANK = "moving_window_rank"
+    BINSEG = "binseg"
+
 
 # ---------------------------------------------------------------------------
 # Problem batteries
@@ -69,47 +89,47 @@ def _make_problems(
 # ---------------------------------------------------------------------------
 # Registry: maps pair name -> factory function
 # ---------------------------------------------------------------------------
-BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
-    "pelt_l2": pair_pelt_l2,
-    "pelt_1d_gaussian": pair_pelt_1d_gaussian,
-    "pelt_poisson": pair_pelt_poisson,
-    "pelt_rank": pair_pelt_rank,
-    "moving_window_l2": pair_moving_window_l2,
-    "moving_window_l1": pair_moving_window_l1,
-    "moving_window_rank": pair_moving_window_rank,
-    "binseg": pair_binseg,
+BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
+    Pair.PELT_L2: pair_pelt_l2,
+    Pair.PELT_1D_GAUSSIAN: pair_pelt_1d_gaussian,
+    Pair.PELT_POISSON: pair_pelt_poisson,
+    Pair.PELT_RANK: pair_pelt_rank,
+    Pair.MOVING_WINDOW_L2: pair_moving_window_l2,
+    Pair.MOVING_WINDOW_L1: pair_moving_window_l1,
+    Pair.MOVING_WINDOW_RANK: pair_moving_window_rank,
+    Pair.BINSEG: pair_binseg,
 }
 
 #: Pairs that don't support data with more than one column (p > 1).
 #: Pairs in this set will only receive univariate (p=1) problems.
-NON_MULTIVARIATE_PAIRS: set[str] = {"pelt_1d_gaussian"}
+NON_MULTIVARIATE_PAIRS: set[Pair] = {Pair.PELT_1D_GAUSSIAN}
 
 #: Pairs that ONLY make sense for multivariate data (p > 1).
 #: Pairs in this set will only receive problems where p > 1.
-MULTIVARIATE_ONLY_PAIRS: set[str] = {"moving_window_rank", "pelt_rank"}
+MULTIVARIATE_ONLY_PAIRS: set[Pair] = {Pair.MOVING_WINDOW_RANK, Pair.PELT_RANK}
 
-PAIR_CATEGORIES: dict[str, list[str]] = {
+PAIR_CATEGORIES: dict[str, list[Pair]] = {
     "mean_change": [
-        "pelt_l2",
-        "pelt_poisson",
-        "moving_window_l2",
-        "moving_window_l1",
-        "binseg",
+        Pair.PELT_L2,
+        Pair.PELT_POISSON,
+        Pair.MOVING_WINDOW_L2,
+        Pair.MOVING_WINDOW_L1,
+        Pair.BINSEG,
     ],
     "needs_min_segment_length": [
-        "pelt_1d_gaussian",
-        # "pelt_linear_trend",
-        "pelt_rank",
+        Pair.PELT_1D_GAUSSIAN,
+        # Pair.PELT_LINEAR_TREND,
+        Pair.PELT_RANK,
     ],
     "multivariate": [
-        "moving_window_rank",
+        Pair.MOVING_WINDOW_RANK,
     ],
 }
 
 
 def collect_cases(
     packages: list[str] | None = None,
-    pairs: list[str] | None = None,
+    pairs: list[Pair] | None = None,
     categories: list[str] | None = None,
     problem_set: str = "small",
     include_fit: bool = True,
@@ -125,7 +145,7 @@ def collect_cases(
         Filter to only include cases from these packages (``"ruptures"``,
         ``"skchange"``). ``None`` means both.
     pairs:
-        List of comparison-pair names to include. ``None`` means all pairs.
+        List of :class:`Pair` members to include. ``None`` means all pairs.
     categories:
         Filter pairs by category (``"mean_change"``, ``"needs_min_segment_length"``,
         ``"multivariate"``).
@@ -156,7 +176,7 @@ def collect_cases(
     )
 
     # Resolve which pairs to run
-    selected_pairs: list[str] = []
+    selected_pairs: list[Pair] = []
     if categories:
         for cat in categories:
             if cat not in PAIR_CATEGORIES:
@@ -169,7 +189,7 @@ def collect_cases(
     if not selected_pairs:
         selected_pairs = list(BENCHMARK_PAIRS)
     # Deduplicate while preserving order
-    seen: set[str] = set()
+    seen: set[Pair] = set()
     selected_pairs = [
         p
         for p in selected_pairs
