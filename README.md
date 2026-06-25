@@ -175,6 +175,6 @@ All combinations of the costs/score above inside the following detectors:
 
 The running times of the following calls are recorded:
 - skchange: detector.fit(X).predict_changepoints(X)
-- ruptures: detector.fit_predict(X, pen=penalty), where penalty is set to the same value as the skchange's penalty parameter set in `__init__`.
+- ruptures: detector.fit_predict(X, pen=penalty), where penalty is set to the same value as the corresponding skchange detector's penalty parameter.
 
 Otherwise, parameters are set to make the algorithms as comparable as possible, e.g. minimum segment length, window sizes, jump sizes etc.
