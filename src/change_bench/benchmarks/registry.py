@@ -17,11 +17,14 @@ from collections.abc import Callable
 from change_bench.benchmarks.comparison_pairs import (
     BenchmarkCase,
     pair_binseg,
+    pair_binseg_mv_gaussian,
     pair_moving_window_l1,
     pair_moving_window_l2,
+    pair_moving_window_mv_gaussian,
     pair_moving_window_rank,
     pair_pelt_1d_gaussian,
     pair_pelt_l2,
+    pair_pelt_mv_gaussian,
     pair_pelt_poisson,
     pair_pelt_rank,
 )
@@ -72,12 +75,15 @@ def _make_problems(
 BENCHMARK_PAIRS: dict[str, Callable[..., list[BenchmarkCase]]] = {
     "pelt_l2": pair_pelt_l2,
     "pelt_1d_gaussian": pair_pelt_1d_gaussian,
+    "pelt_mv_gaussian": pair_pelt_mv_gaussian,
     "pelt_poisson": pair_pelt_poisson,
     "pelt_rank": pair_pelt_rank,
     "moving_window_l2": pair_moving_window_l2,
     "moving_window_l1": pair_moving_window_l1,
+    "moving_window_mv_gaussian": pair_moving_window_mv_gaussian,
     "moving_window_rank": pair_moving_window_rank,
     "binseg": pair_binseg,
+    "binseg_mv_gaussian": pair_binseg_mv_gaussian,
 }
 
 #: Pairs that don't support data with more than one column (p > 1).
@@ -86,7 +92,13 @@ NON_MULTIVARIATE_PAIRS: set[str] = {"pelt_1d_gaussian"}
 
 #: Pairs that ONLY make sense for multivariate data (p > 1).
 #: Pairs in this set will only receive problems where p > 1.
-MULTIVARIATE_ONLY_PAIRS: set[str] = {"moving_window_rank", "pelt_rank"}
+MULTIVARIATE_ONLY_PAIRS: set[str] = {
+    "moving_window_rank",
+    "moving_window_mv_gaussian",
+    "pelt_rank",
+    "pelt_mv_gaussian",
+    "binseg_mv_gaussian",
+}
 
 PAIR_CATEGORIES: dict[str, list[str]] = {
     "mean_change": [
@@ -103,6 +115,11 @@ PAIR_CATEGORIES: dict[str, list[str]] = {
     ],
     "multivariate": [
         "moving_window_rank",
+    ],
+    "mv_gaussian": [
+        "pelt_mv_gaussian",
+        "moving_window_mv_gaussian",
+        "binseg_mv_gaussian",
     ],
 }
 
