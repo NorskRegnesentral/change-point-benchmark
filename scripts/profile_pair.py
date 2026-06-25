@@ -211,6 +211,7 @@ def main() -> None:
             stats.print_stats(40)
     else:
         import pyinstrument
+        from pyinstrument.renderers import JSONRenderer
 
         profiler = pyinstrument.Profiler(interval=0.001)
         profiler.start()
@@ -222,7 +223,7 @@ def main() -> None:
             if ext == ".html":
                 output = profiler.output_html()
             elif ext == ".json":
-                output = profiler.output(renderer="json")
+                output = profiler.output(renderer=JSONRenderer())
             else:
                 output = profiler.output_text(unicode=True, color=False)
             args.output.write_text(output)
