@@ -146,13 +146,35 @@ uv run bench --pairs pelt_l2 moving_window_rank --dimensions 1 2 5 --runs 10
 
 ## Ruptures - Skchange comparison pairs
 
+Costs/scores:
+- CUSUM/L2Cost/rpt.CostL2
+- L1Cost/rpt.CostL1
+- MultivariateGaussianScore/MultivariateGaussianCost/rpt.CostNormal
+- PoissonCost/rpt.CostPoisson
+
+All combinations of the costs/score above inside the following detectors:
+- PELT/rpt.Pelt
+- MovingWindow/rpt.Window
+- SeededBinarySegmentation/rpt.Binseg
+
+
 | Pair name | ruptures | skchange |
 |-----------|----------|----------|
-| `pelt_l2` | `KernelCPD(kernel="linear")` | `PELT(cost=L2Cost())` |
-| `pelt_1d_gaussian` | `Pelt(model="normal")` | `PELT(cost=GaussianCost())` |
-| `pelt_poisson` | `Pelt(custom_cost=CostPoisson())` | `PELT(cost=PoissonCost())` |
-| `moving_window` | `Window(model="l2")` | `MovingWindow(change_score=CUSUM())` |
-| `moving_window_l2` | `Window(model="l2", width=50)` | `MovingWindow(change_score=CostChangeScore(L2Cost()), bandwidth=25)` |
-| `moving_window_l1` | `Window(model="l1", width=50)` | `MovingWindow(change_score=CostChangeScore(L1Cost()), bandwidth=25)` |
-| `moving_window_rank` | `Window(model="rank", width=50)` | `MovingWindow(change_score=CostChangeScore(RankCost()), bandwidth=25)` |
-| `binseg` | `Binseg(model="l2")` | `SeededBinarySegmentation(change_score=CUSUM())` |
+| `pelt_l2` | `KernelCPD("linear")` | `PELT(L2Cost())` |
+| `pelt_l1` | `Pelt("l1")` | `PELT(L1Cost())` |
+| `pelt_gaussian` | `Pelt("normal")` | `PELT(MultivariateGaussianCost())` |
+| `pelt_poisson` | `Pelt(custom_cost=CostPoisson())` | `PELT(PoissonCost())` |
+| `moving_window_l2` | `Window("l2")` | `MovingWindow(CUSUM())` |
+| `moving_window_l1` | `Window("l1")` | `MovingWindow(CostChangeScore(L1Cost()))` |
+| `moving_window_gaussian` | `Window("normal")` | `MovingWindow(MultivariateGaussianScore())` |
+| `moving_window_poisson` | `Window(custom_cost=CostPoisson())` | `MovingWindow(CostChangeScore(PoissonCost()))` |
+| `binseg_l2` | `Binseg("l2")` | `SeededBinarySegmentation(CUSUM())` |
+| `binseg_l1` | `Binseg("l1")` | `SeededBinarySegmentation(CostChangeScore(L1Cost()))` |
+| `binseg_gaussian` | `Binseg("normal")` | `SeededBinarySegmentation(MultivariateGaussianScore())` |
+| `binseg_poisson` | `Binseg(custom_cost=CostPoisson())` | `SeededBinarySegmentation(CostChangeScore(PoissonCost()))` |
+
+The running times of the following calls are recorded:
+- skchange: detector.fit(X).predict_changepoints(X)
+- ruptures: detector.fit_predict(X, pen=penalty), where penalty is set to the same value as the corresponding skchange detector's penalty parameter.
+
+Otherwise, parameters are set to make the algorithms as comparable as possible, e.g. minimum segment length, window sizes, jump sizes etc.
