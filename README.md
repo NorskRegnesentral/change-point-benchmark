@@ -163,15 +163,12 @@ All combinations of the costs/score above inside the following detectors:
 | `pelt_l2` | `KernelCPD("linear")` | `PELT(L2Cost())` |
 | `pelt_l1` | `Pelt("l1")` | `PELT(L1Cost())` |
 | `pelt_gaussian` | `Pelt("normal")` | `PELT(MultivariateGaussianCost())` |
-| `pelt_poisson` | `Pelt(custom_cost=CostPoisson())` | `PELT(PoissonCost())` |
 | `moving_window_l2` | `Window("l2")` | `MovingWindow(CUSUM())` |
 | `moving_window_l1` | `Window("l1")` | `MovingWindow(CostChangeScore(L1Cost()))` |
 | `moving_window_gaussian` | `Window("normal")` | `MovingWindow(MultivariateGaussianScore())` |
-| `moving_window_poisson` | `Window(custom_cost=CostPoisson())` | `MovingWindow(CostChangeScore(PoissonCost()))` |
 | `binseg_l2` | `Binseg("l2")` | `SeededBinarySegmentation(CUSUM())` |
 | `binseg_l1` | `Binseg("l1")` | `SeededBinarySegmentation(CostChangeScore(L1Cost()))` |
 | `binseg_gaussian` | `Binseg("normal")` | `SeededBinarySegmentation(MultivariateGaussianScore())` |
-| `binseg_poisson` | `Binseg(custom_cost=CostPoisson())` | `SeededBinarySegmentation(CostChangeScore(PoissonCost()))` |
 
 The running times of the following calls are recorded:
 - skchange: detector.fit(X).predict_changepoints(X)
