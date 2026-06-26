@@ -8,6 +8,7 @@ Each module in this subpackage exposes:
 from change_bench.benchmarks.registry import (
     BENCHMARK_PAIRS,
     PAIR_CATEGORIES,
+    Pair,
     collect_cases,
 )
 from change_bench.benchmarks.comparison_pairs import BenchmarkCase
@@ -16,5 +17,6 @@ __all__ = [
     "BENCHMARK_PAIRS",
     "PAIR_CATEGORIES",
     "BenchmarkCase",
+    "Pair",
     "collect_cases",
 ]

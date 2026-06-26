@@ -26,14 +26,14 @@ from change_bench.problems.base import BenchmarkProblem
 JOINT_PENALTY = 10.0
 
 
-def pair_binseg(
+def pair_binseg_l2_cusum(
     problems: list[BenchmarkProblem],
     *,
     include_fit: bool = True,
     min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """Binary segmentation with CUSUM/L2 — skchange vs ruptures."""
-    pair_name = "binseg"
+    pair_name = "binseg_l2_cusum"
     cases: list[BenchmarkCase] = []
     sk_func = skchange_run if include_fit else skchange_predict_only
 
