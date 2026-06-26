@@ -14,8 +14,7 @@ import numpy as np
 import ruptures as rpt
 from skchange.new_api.detectors import SeededBinarySegmentation
 from skchange.new_api.interval_scorers import (
-    CostChangeScore,
-    MultivariateGaussianCost,
+    MultivariateGaussianScore,
     PenalisedScore,
 )
 
@@ -36,7 +35,7 @@ def pair_binseg_mv_gaussian(
     include_fit: bool = True,
     min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
-    """Seeded binary segmentation with MultivariateGaussianCost/normal — skchange vs ruptures."""
+    """Seeded binary segmentation with MultivariateGaussianScore/normal cost."""
     pair_name = "binseg_mv_gaussian"
     cases: list[BenchmarkCase] = []
     sk_func = skchange_run if include_fit else skchange_predict_only
@@ -49,7 +48,7 @@ def pair_binseg_mv_gaussian(
         def make_sk_setup(fit=include_fit):
             def setup(data: np.ndarray):
                 fixed_penalty_score = PenalisedScore(
-                    CostChangeScore(MultivariateGaussianCost()),
+                    MultivariateGaussianScore(apply_bartlett_correction=False),
                     penalty=JOINT_BINSEG_MV_GAUSSIAN_PENALTY,
                 )
                 det = SeededBinarySegmentation(change_score=fixed_penalty_score)

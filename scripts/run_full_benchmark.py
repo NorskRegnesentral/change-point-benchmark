@@ -115,7 +115,6 @@ JOBS: list[Job] = [
 # ============================================================================
 # Helpers
 # ============================================================================
-
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 
 #: Columns that uniquely identify a benchmark case in the parquet output.

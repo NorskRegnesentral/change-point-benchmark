@@ -1,11 +1,11 @@
-"""MovingWindow + MultivariateGaussianCost comparison pair (multivariate).
+"""MovingWindow + MultivariateGaussianScore comparison pair (multivariate).
 
 skchange: MovingWindow(change_score=PenalisedScore(
-              CostChangeScore(MultivariateGaussianCost()), penalty=P),
+              MultivariateGaussianScore(apply_bartlett_correction=False), penalty=P),
               bandwidth=BW)
 ruptures: Window(model="normal", width=2*BW, min_size=max(msl, n_columns+1), jump=1)
 
-MultivariateGaussianCost requires min_size >= data_dimension + 1, so
+MultivariateGaussianScore requires min_size >= data_dimension + 1, so
 the effective minimum segment length is automatically adjusted per problem.
 """
 
@@ -15,8 +15,7 @@ import numpy as np
 import ruptures as rpt
 from skchange.new_api.detectors import MovingWindow
 from skchange.new_api.interval_scorers import (
-    CostChangeScore,
-    MultivariateGaussianCost,
+    MultivariateGaussianScore,
     PenalisedScore,
 )
 
@@ -38,7 +37,7 @@ def pair_moving_window_mv_gaussian(
     include_fit: bool = True,
     min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
-    """Moving window with MultivariateGaussianCost/normal — skchange vs ruptures."""
+    """Moving window with MultivariateGaussianScore/normal cost."""
     pair_name = "moving_window_mv_gaussian"
     bw = MW_BANDWIDTH
     cases: list[BenchmarkCase] = []
@@ -52,7 +51,7 @@ def pair_moving_window_mv_gaussian(
         def make_sk_setup(bandwidth=bw, fit=include_fit):
             def setup(data: np.ndarray):
                 fixed_penalty_score = PenalisedScore(
-                    CostChangeScore(MultivariateGaussianCost()),
+                    MultivariateGaussianScore(apply_bartlett_correction=False),
                     penalty=JOINT_MW_MV_GAUSSIAN_PENALTY,
                 )
                 det = MovingWindow(
@@ -64,13 +63,9 @@ def pair_moving_window_mv_gaussian(
 
             return setup
 
-        def make_rpt_setup(
-            width=2 * bw, fit=include_fit, msl=effective_msl
-        ):
+        def make_rpt_setup(width=2 * bw, fit=include_fit, msl=effective_msl):
             def setup(data: np.ndarray):
-                algo = rpt.Window(
-                    model="normal", width=width, min_size=msl, jump=1
-                )
+                algo = rpt.Window(model="normal", width=width, min_size=msl, jump=1)
                 if not fit:
                     algo.fit(data)
                 return (algo, data), {}
