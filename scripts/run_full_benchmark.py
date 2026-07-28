@@ -104,7 +104,12 @@ JOBS: list[Job] = [
         output_name="needs_min_segment_length",
     ),
     Job(
-        pairs=[Pair.MOVING_WINDOW_RANK],
+        pairs=[
+            Pair.MOVING_WINDOW_RANK,
+            Pair.BINSEG_MV_GAUSSIAN,
+            Pair.PELT_MV_GAUSSIAN,
+            Pair.MOVING_WINDOW_MV_GAUSSIAN,
+        ],
         dimensions=[2, 5],
         min_segment_length=6,  # must be > max(dimensions) for rank costs
         output_name="multivariate",

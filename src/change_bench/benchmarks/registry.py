@@ -31,6 +31,7 @@ from change_bench.benchmarks.comparison_pairs import (
 )
 from change_bench.problems.base import BenchmarkProblem, make_null_problems
 
+
 # ---------------------------------------------------------------------------
 # Pair enum — the canonical identifier for every comparison pair.
 # Uses StrEnum so values work as dict keys and CLI arguments directly.

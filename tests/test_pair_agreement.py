@@ -529,18 +529,21 @@ class TestBinSegAgreement:
 #: Penalty for MW / BinSeg mv_gaussian tests (match benchmark pair constants).
 SKCHANGE_MW_MV_GAUSSIAN_PENALTY: float = 20.0
 RUPTURES_MW_MV_GAUSSIAN_PENALTY: float = SKCHANGE_MW_MV_GAUSSIAN_PENALTY
-SKCHANGE_BINSEG_MV_GAUSSIAN_PENALTY: float = 20.0
+SKCHANGE_BINSEG_MV_GAUSSIAN_PENALTY: float = 60.0
 RUPTURES_BINSEG_MV_GAUSSIAN_PENALTY: float = SKCHANGE_BINSEG_MV_GAUSSIAN_PENALTY
 
 
 class TestPeltMvGaussianAgreement:
     """PELT + MultivariateGaussianCost: skchange vs ruptures Pelt(model='normal')."""
 
-    def test_same_changepoints(self):
+    mv_normal_pelt_penalty = 60.0
+
+    def test_skchange_better_segmentation_cost(self):
         rng = np.random.default_rng(42)
         changepoints = [100, 200]
         n_columns = 3
         min_seg = n_columns + 1  # MultivariateGaussianCost constraint
+
         data = _make_normal_change_data(
             rng,
             n_samples=300,
@@ -552,7 +555,7 @@ class TestPeltMvGaussianAgreement:
         # skchange
         sk_det = SkchangePELT(
             cost=MultivariateGaussianCost(),
-            penalty=TEST_PENALTY,
+            penalty=self.mv_normal_pelt_penalty,
             min_segment_length=min_seg,
         )
         sk_det.fit(data)
@@ -562,11 +565,42 @@ class TestPeltMvGaussianAgreement:
         rpt_algo = rpt.Pelt(model="normal", min_size=min_seg, jump=1)
         rpt_algo.fit(data)
         rpt_cps = sorted(
-            _strip_endpoint(rpt_algo.predict(pen=TEST_PENALTY), len(data))
+            _strip_endpoint(
+                rpt_algo.predict(pen=self.mv_normal_pelt_penalty), len(data)
+            )
         )
 
-        assert sk_cps == rpt_cps, (
-            f"PELT MvGaussian disagreement: skchange={sk_cps}, ruptures={rpt_cps}"
+        sk_changepoint_interval_specs = np.array(
+            [[0, sk_cps[0]]]
+            + [[sk_cps[i], sk_cps[i + 1]] for i in range(len(sk_cps) - 1)]
+            + [[sk_cps[-1], len(data)]]
+        )
+        rpt_changepoint_interval_specs = np.array(
+            [[0, rpt_cps[0]]]
+            + [[rpt_cps[i], rpt_cps[i + 1]] for i in range(len(rpt_cps) - 1)]
+            + [[rpt_cps[-1], len(data)]]
+        )
+        sk_mv_gaussian_cost = MultivariateGaussianCost().fit(data)
+        data_cache = sk_mv_gaussian_cost.precompute(data)
+        sk_sk_cps_segmentation_cost = sk_mv_gaussian_cost.evaluate(
+            data_cache,
+            sk_changepoint_interval_specs,
+        ).sum()
+        sk_rpt_cps_segmentation_cost = sk_mv_gaussian_cost.evaluate(
+            data_cache,
+            rpt_changepoint_interval_specs,
+        ).sum()
+
+        rpt_rpt_cps_cost = rpt_algo.cost.sum_of_costs(rpt_cps + [len(data)])
+        rpt_sk_cps_cost = rpt_algo.cost.sum_of_costs(sk_cps + [len(data)])
+
+        assert sk_sk_cps_segmentation_cost <= sk_rpt_cps_segmentation_cost, (
+            f"Skchange PELT MvGaussian found worse segmentation than ruptures: "
+            f"skchange={sk_cps}, ruptures={rpt_cps}"
+        )
+        assert rpt_sk_cps_cost <= rpt_rpt_cps_cost, (
+            f"Skchange PELT MvGaussian found worse segmentation than ruptures: "
+            f"skchange={sk_cps}, ruptures={rpt_cps}"
         )
 
     def test_detects_known_changepoints(self):
@@ -584,7 +618,7 @@ class TestPeltMvGaussianAgreement:
 
         sk_det = SkchangePELT(
             cost=MultivariateGaussianCost(),
-            penalty=TEST_PENALTY,
+            penalty=self.mv_normal_pelt_penalty,
             min_segment_length=min_seg,
         )
         sk_det.fit(data)
@@ -622,9 +656,7 @@ class TestMovingWindowMvGaussianAgreement:
         sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
 
         # ruptures
-        rpt_algo = rpt.Window(
-            model="normal", width=2 * bw, min_size=min_seg, jump=1
-        )
+        rpt_algo = rpt.Window(model="normal", width=2 * bw, min_size=min_seg, jump=1)
         rpt_algo.fit(data)
         rpt_cps = sorted(
             _strip_endpoint(

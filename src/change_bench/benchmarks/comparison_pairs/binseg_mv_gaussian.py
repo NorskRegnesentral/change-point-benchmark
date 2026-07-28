@@ -21,8 +21,8 @@ from skchange.new_api.interval_scorers import (
 from change_bench.benchmarks.comparison_pairs._common import (
     BenchmarkCase,
     make_prepare,
+    skchange_fit_predict,
     skchange_predict_only,
-    skchange_run,
 )
 from change_bench.problems.base import BenchmarkProblem
 
@@ -38,7 +38,7 @@ def pair_binseg_mv_gaussian(
     """Seeded binary segmentation with MultivariateGaussianScore/normal cost."""
     pair_name = "binseg_mv_gaussian"
     cases: list[BenchmarkCase] = []
-    sk_func = skchange_run if include_fit else skchange_predict_only
+    sk_func = skchange_fit_predict if include_fit else skchange_predict_only
 
     for problem in problems:
         cfg = problem.dataset_config
