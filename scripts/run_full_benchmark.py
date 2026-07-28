@@ -80,6 +80,7 @@ RUNS_DEFAULT: int = 3
 # Override toggle: when False, skip cases already present in existing parquet.
 # ---------------------------------------------------------------------------
 OVERRIDE_RESULTS: bool = False
+PROBLEM_SET: str = "small"  # "small" or "full"
 
 
 # ---------------------------------------------------------------------------
@@ -96,12 +97,14 @@ JOBS: list[Job] = [
         dimensions=[1, 2, 5],
         min_segment_length=1,
         output_name="mean_change",
+        problem_set=PROBLEM_SET,
     ),
     Job(
         pairs=[Pair.PELT_1D_GAUSSIAN, Pair.PELT_RANK],
         dimensions=[1, 2, 5],
         min_segment_length=6,  # must be > max(dimensions) for rank costs
         output_name="needs_min_segment_length",
+        problem_set=PROBLEM_SET,
     ),
     Job(
         pairs=[
@@ -113,6 +116,7 @@ JOBS: list[Job] = [
         dimensions=[2, 5],
         min_segment_length=6,  # must be > max(dimensions) for rank costs
         output_name="multivariate",
+        problem_set=PROBLEM_SET,
     ),
 ]
 

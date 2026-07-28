@@ -6,7 +6,6 @@ ruptures: KernelCPD(kernel="linear", min_size=1, jump=1)
 
 from __future__ import annotations
 
-import numpy as np
 import ruptures as rpt
 from skchange.new_api.detectors import PELT as SkchangePELT
 from skchange.new_api.interval_scorers import L2Cost
@@ -14,11 +13,21 @@ from skchange.new_api.interval_scorers import L2Cost
 from change_bench.benchmarks.comparison_pairs._common import (
     PELT_PENALTY,
     BenchmarkCase,
-    make_prepare,
-    skchange_predict_only,
-    skchange_fit_predict,
+    PairConfig,
+    build_pair_cases,
 )
 from change_bench.problems.base import BenchmarkProblem
+
+_CONFIG = PairConfig(
+    pair_name="pelt_l2",
+    penalty=PELT_PENALTY,
+    sk_name_prefix="skchange_pelt_l2",
+    rpt_name_prefix="ruptures_kernelcpd_linear",
+    make_sk_detector=lambda msl: SkchangePELT(
+        cost=L2Cost(), penalty=PELT_PENALTY, min_segment_length=msl
+    ),
+    make_rpt_algo=lambda msl: rpt.KernelCPD(kernel="linear", min_size=msl, jump=1),
+)
 
 
 def pair_pelt_l2(
@@ -28,71 +37,6 @@ def pair_pelt_l2(
     min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """PELT with L2/linear-kernel cost — skchange vs ruptures."""
-    pair_name = "pelt_l2"
-    cases: list[BenchmarkCase] = []
-    sk_func = skchange_fit_predict if include_fit else skchange_predict_only
-
-    for problem in problems:
-        cfg = problem.dataset_config
-        prepare = make_prepare(problem)
-
-        def make_sk_setup(fit=include_fit, msl=min_segment_length):
-            def setup(data: np.ndarray):
-                det = SkchangePELT(
-                    cost=L2Cost(),
-                    penalty=PELT_PENALTY,
-                    min_segment_length=msl,
-                )
-                if not fit:
-                    det.fit(data)
-                return (det, data), {}
-
-            return setup
-
-        def make_rpt_setup(fit=include_fit, msl=min_segment_length):
-            def setup(data: np.ndarray):
-                algo = rpt.KernelCPD(kernel="linear", min_size=msl, jump=1)
-                if not fit:
-                    algo.fit(data)
-                return (algo, data), {}
-
-            return setup
-
-        def rpt_func(algo, d, _fit=include_fit):
-            if _fit:
-                algo.fit(d)
-            return algo.predict(pen=PELT_PENALTY)
-
-        cases.append(
-            BenchmarkCase(
-                package="skchange",
-                cpd_algorithm=pair_name,
-                name=f"skchange_pelt_l2/{problem.name}",
-                n_samples=cfg.n_samples,
-                n_changepoints=len(problem.true_changepoints),
-                data_dimension=cfg.n_columns,
-                include_fit=include_fit,
-                min_segment_length=min_segment_length,
-                prepare=prepare,
-                setup=make_sk_setup(),
-                func=sk_func,
-            )
-        )
-
-        cases.append(
-            BenchmarkCase(
-                package="ruptures",
-                cpd_algorithm=pair_name,
-                name=f"ruptures_kernelcpd_linear/{problem.name}",
-                n_samples=cfg.n_samples,
-                n_changepoints=len(problem.true_changepoints),
-                data_dimension=cfg.n_columns,
-                include_fit=include_fit,
-                min_segment_length=min_segment_length,
-                prepare=prepare,
-                setup=make_rpt_setup(),
-                func=rpt_func,
-            )
-        )
-
-    return cases
+    return build_pair_cases(
+        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+    )

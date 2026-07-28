@@ -18,9 +18,8 @@ from skchange.new_api.interval_scorers import PoissonCost
 from change_bench.benchmarks.comparison_pairs._common import (
     PELT_PENALTY,
     BenchmarkCase,
-    make_prepare,
-    skchange_predict_only,
-    skchange_fit_predict,
+    PairConfig,
+    build_pair_cases,
 )
 from change_bench.problems.base import BenchmarkProblem
 
@@ -61,6 +60,19 @@ class CostPoisson(rpt.base.BaseCost):
         return cost.sum()
 
 
+_CONFIG = PairConfig(
+    pair_name="pelt_poisson",
+    penalty=PELT_PENALTY,
+    sk_name_prefix="skchange_pelt_poisson",
+    rpt_name_prefix="ruptures_pelt_poisson",
+    make_sk_detector=lambda msl: SkchangePELT(
+        cost=PoissonCost(), penalty=PELT_PENALTY, min_segment_length=msl
+    ),
+    make_rpt_algo=lambda msl: rpt.Pelt(custom_cost=CostPoisson(), min_size=msl, jump=1),
+    prepare_transform=lambda x: np.abs(x) + 0.01,
+)
+
+
 def pair_pelt_poisson(
     problems: list[BenchmarkProblem],
     *,
@@ -68,81 +80,6 @@ def pair_pelt_poisson(
     min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
     """PELT with Poisson cost — skchange vs ruptures (custom cost)."""
-    pair_name = "pelt_poisson"
-    cases: list[BenchmarkCase] = []
-    sk_func = skchange_fit_predict if include_fit else skchange_predict_only
-
-    for problem in problems:
-        cfg = problem.dataset_config
-        _base_prepare = make_prepare(problem)
-
-        def make_poisson_prepare(base=_base_prepare):
-            """Wrap base prepare to ensure non-negative data for Poisson cost."""
-
-            def prepare() -> np.ndarray:
-                return np.abs(base()) + 0.01
-
-            return prepare
-
-        prepare = make_poisson_prepare()
-
-        def make_sk_setup(fit=include_fit, msl=min_segment_length):
-            def setup(data: np.ndarray):
-                det = SkchangePELT(
-                    cost=PoissonCost(),
-                    penalty=PELT_PENALTY,
-                    min_segment_length=msl,
-                )
-                if not fit:
-                    det.fit(data)
-                return (det, data), {}
-
-            return setup
-
-        def make_rpt_setup(fit=include_fit, msl=min_segment_length):
-            def setup(data: np.ndarray):
-                algo = rpt.Pelt(custom_cost=CostPoisson(), min_size=msl, jump=1)
-                if not fit:
-                    algo.fit(data)
-                return (algo, data), {}
-
-            return setup
-
-        def rpt_func(algo, d, _fit=include_fit):
-            if _fit:
-                algo.fit(d)
-            return algo.predict(pen=PELT_PENALTY)
-
-        cases.append(
-            BenchmarkCase(
-                package="skchange",
-                cpd_algorithm=pair_name,
-                name=f"skchange_pelt_poisson/{problem.name}",
-                n_samples=cfg.n_samples,
-                n_changepoints=len(problem.true_changepoints),
-                data_dimension=cfg.n_columns,
-                include_fit=include_fit,
-                min_segment_length=min_segment_length,
-                prepare=prepare,
-                setup=make_sk_setup(),
-                func=sk_func,
-            )
-        )
-
-        cases.append(
-            BenchmarkCase(
-                package="ruptures",
-                cpd_algorithm=pair_name,
-                name=f"ruptures_pelt_poisson/{problem.name}",
-                n_samples=cfg.n_samples,
-                n_changepoints=len(problem.true_changepoints),
-                data_dimension=cfg.n_columns,
-                include_fit=include_fit,
-                min_segment_length=min_segment_length,
-                prepare=prepare,
-                setup=make_rpt_setup(),
-                func=rpt_func,
-            )
-        )
-
-    return cases
+    return build_pair_cases(
+        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+    )

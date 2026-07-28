@@ -5,7 +5,11 @@ a list of :class:`~change_bench.benchmarks.comparison_pairs._common.BenchmarkCas
 instances (one for skchange, one for ruptures) for every problem it receives.
 """
 
-from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
+from change_bench.benchmarks.comparison_pairs._common import (
+    BenchmarkCase,
+    PairConfig,
+    build_pair_cases,
+)
 from change_bench.benchmarks.comparison_pairs.binseg import pair_binseg_l2_cusum
 from change_bench.benchmarks.comparison_pairs.binseg_mv_gaussian import (
     pair_binseg_mv_gaussian,
@@ -41,6 +45,8 @@ from change_bench.benchmarks.comparison_pairs.pelt_rank import pair_pelt_rank
 __all__ = [
     "BenchmarkCase",
     "CostPoisson",
+    "PairConfig",
+    "build_pair_cases",
     "pair_binseg_l2_cusum",
     "pair_binseg_mv_gaussian",
     "pair_moving_window_l1",
