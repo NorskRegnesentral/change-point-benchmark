@@ -17,23 +17,25 @@ from enum import StrEnum
 
 from change_bench.benchmarks.comparison_pairs import (
     BenchmarkCase,
-    pair_binseg,
+    pair_binseg_l2_cusum,
+    pair_binseg_mv_gaussian,
     pair_moving_window_l1,
     pair_moving_window_l2,
+    pair_moving_window_mv_gaussian,
     pair_moving_window_rank,
     pair_pelt_1d_gaussian,
     pair_pelt_l2,
+    pair_pelt_mv_gaussian,
     pair_pelt_poisson,
     pair_pelt_rank,
 )
 from change_bench.problems.base import BenchmarkProblem, make_null_problems
 
+
 # ---------------------------------------------------------------------------
 # Pair enum — the canonical identifier for every comparison pair.
 # Uses StrEnum so values work as dict keys and CLI arguments directly.
 # ---------------------------------------------------------------------------
-
-
 class Pair(StrEnum):
     """Available comparison pairs."""
 
@@ -44,7 +46,10 @@ class Pair(StrEnum):
     MOVING_WINDOW_L2 = "moving_window_l2"
     MOVING_WINDOW_L1 = "moving_window_l1"
     MOVING_WINDOW_RANK = "moving_window_rank"
-    BINSEG = "binseg"
+    BINSEG_L2_CUSUM = "binseg_l2_cusum"
+    BINSEG_MV_GAUSSIAN = "binseg_mv_gaussian"
+    PELT_MV_GAUSSIAN = "pelt_mv_gaussian"
+    MOVING_WINDOW_MV_GAUSSIAN = "moving_window_mv_gaussian"
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +102,10 @@ BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
     Pair.MOVING_WINDOW_L2: pair_moving_window_l2,
     Pair.MOVING_WINDOW_L1: pair_moving_window_l1,
     Pair.MOVING_WINDOW_RANK: pair_moving_window_rank,
-    Pair.BINSEG: pair_binseg,
+    Pair.BINSEG_L2_CUSUM: pair_binseg_l2_cusum,
+    Pair.BINSEG_MV_GAUSSIAN: pair_binseg_mv_gaussian,
+    Pair.PELT_MV_GAUSSIAN: pair_pelt_mv_gaussian,
+    Pair.MOVING_WINDOW_MV_GAUSSIAN: pair_moving_window_mv_gaussian,
 }
 
 #: Pairs that don't support data with more than one column (p > 1).
@@ -114,7 +122,7 @@ PAIR_CATEGORIES: dict[str, list[Pair]] = {
         Pair.PELT_POISSON,
         Pair.MOVING_WINDOW_L2,
         Pair.MOVING_WINDOW_L1,
-        Pair.BINSEG,
+        Pair.BINSEG_L2_CUSUM,
     ],
     "needs_min_segment_length": [
         Pair.PELT_1D_GAUSSIAN,
@@ -123,6 +131,11 @@ PAIR_CATEGORIES: dict[str, list[Pair]] = {
     ],
     "multivariate": [
         Pair.MOVING_WINDOW_RANK,
+    ],
+    "mv_gaussian": [
+        Pair.PELT_MV_GAUSSIAN,
+        Pair.MOVING_WINDOW_MV_GAUSSIAN,
+        Pair.BINSEG_MV_GAUSSIAN,
     ],
 }
 
@@ -148,7 +161,7 @@ def collect_cases(
         List of :class:`Pair` members to include. ``None`` means all pairs.
     categories:
         Filter pairs by category (``"mean_change"``, ``"needs_min_segment_length"``,
-        ``"multivariate"``).
+        ``"multivariate"``, ``"mv_gaussian"``).
         ``None`` means all categories.  When both *pairs* and *categories*
         are given, the union is used.
     problem_set:

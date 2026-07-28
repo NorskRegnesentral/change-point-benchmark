@@ -1,19 +1,21 @@
-"""MovingWindow + Rank cost comparison pair (multivariate only).
+"""PELT + MultivariateGaussianCost comparison pair (multivariate).
 
-skchange: MovingWindow(change_score=PenalisedScore(CostChangeScore(RankCost()),
-                    penalty=P), bandwidth=BW)
-ruptures: Window(model="rank", width=2*BW, min_size=1, jump=1)
+skchange: PELT(cost=MultivariateGaussianCost())
+ruptures: Pelt(model="normal", min_size=max(msl, n_columns+1), jump=1)
+
+MultivariateGaussianCost requires min_size >= data_dimension + 1, so
+the effective minimum segment length is automatically adjusted per problem.
 """
 
 from __future__ import annotations
 
 import numpy as np
 import ruptures as rpt
-from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import CostChangeScore, PenalisedScore, RankCost
+from skchange.new_api.detectors import PELT as SkchangePELT
+from skchange.new_api.interval_scorers import MultivariateGaussianCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
-    MW_BANDWIDTH,
+    PELT_PENALTY,
     BenchmarkCase,
     make_prepare,
     skchange_predict_only,
@@ -21,32 +23,29 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.problems.base import BenchmarkProblem
 
-JOINT_MW_RANK_PENALTY = 4.0
 
-
-def pair_moving_window_rank(
+def pair_pelt_mv_gaussian(
     problems: list[BenchmarkProblem],
     *,
     include_fit: bool = True,
-    min_segment_length: int = 1,
+    min_segment_length: int = 2,
 ) -> list[BenchmarkCase]:
-    """Moving window with Rank cost (fixed bandwidth) — skchange vs ruptures."""
-    pair_name = "moving_window_rank"
-    bw = MW_BANDWIDTH
+    """PELT with MultivariateGaussianCost/normal — skchange vs ruptures."""
+    pair_name = "pelt_mv_gaussian"
     cases: list[BenchmarkCase] = []
     sk_func = skchange_fit_predict if include_fit else skchange_predict_only
 
     for problem in problems:
         cfg = problem.dataset_config
         prepare = make_prepare(problem)
+        effective_msl = max(min_segment_length, cfg.n_columns + 1)
 
-        def make_sk_setup(bandwidth=bw, fit=include_fit):
+        def make_sk_setup(fit=include_fit, msl=effective_msl):
             def setup(data: np.ndarray):
-                fixed_penalty_score = PenalisedScore(
-                    CostChangeScore(RankCost()), penalty=JOINT_MW_RANK_PENALTY
-                )
-                det = MovingWindow(
-                    change_score=fixed_penalty_score, bandwidth=bandwidth
+                det = SkchangePELT(
+                    cost=MultivariateGaussianCost(),
+                    penalty=PELT_PENALTY,
+                    min_segment_length=msl,
                 )
                 if not fit:
                     det.fit(data)
@@ -54,9 +53,9 @@ def pair_moving_window_rank(
 
             return setup
 
-        def make_rpt_setup(width=2 * bw, fit=include_fit, msl=min_segment_length):
+        def make_rpt_setup(fit=include_fit, msl=effective_msl):
             def setup(data: np.ndarray):
-                algo = rpt.Window(model="rank", width=width, min_size=msl, jump=1)
+                algo = rpt.Pelt(model="normal", min_size=msl, jump=1)
                 if not fit:
                     algo.fit(data)
                 return (algo, data), {}
@@ -66,18 +65,18 @@ def pair_moving_window_rank(
         def rpt_func(algo, d, _fit=include_fit):
             if _fit:
                 algo.fit(d)
-            return algo.predict(pen=JOINT_MW_RANK_PENALTY)
+            return algo.predict(pen=PELT_PENALTY)
 
         cases.append(
             BenchmarkCase(
                 package="skchange",
                 cpd_algorithm=pair_name,
-                name=f"skchange_moving_window_rank/{problem.name}",
+                name=f"skchange_pelt_mv_gaussian/{problem.name}",
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
-                min_segment_length=min_segment_length,
+                min_segment_length=effective_msl,
                 prepare=prepare,
                 setup=make_sk_setup(),
                 func=sk_func,
@@ -88,12 +87,12 @@ def pair_moving_window_rank(
             BenchmarkCase(
                 package="ruptures",
                 cpd_algorithm=pair_name,
-                name=f"ruptures_window_rank/{problem.name}",
+                name=f"ruptures_pelt_normal/{problem.name}",
                 n_samples=cfg.n_samples,
                 n_changepoints=len(problem.true_changepoints),
                 data_dimension=cfg.n_columns,
                 include_fit=include_fit,
-                min_segment_length=min_segment_length,
+                min_segment_length=effective_msl,
                 prepare=prepare,
                 setup=make_rpt_setup(),
                 func=rpt_func,

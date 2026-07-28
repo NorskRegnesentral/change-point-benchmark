@@ -16,7 +16,7 @@ from change_bench.benchmarks.comparison_pairs._common import (
     BenchmarkCase,
     make_prepare,
     skchange_predict_only,
-    skchange_run,
+    skchange_fit_predict,
 )
 from change_bench.problems.base import BenchmarkProblem
 
@@ -30,7 +30,7 @@ def pair_pelt_l2(
     """PELT with L2/linear-kernel cost — skchange vs ruptures."""
     pair_name = "pelt_l2"
     cases: list[BenchmarkCase] = []
-    sk_func = skchange_run if include_fit else skchange_predict_only
+    sk_func = skchange_fit_predict if include_fit else skchange_predict_only
 
     for problem in problems:
         cfg = problem.dataset_config

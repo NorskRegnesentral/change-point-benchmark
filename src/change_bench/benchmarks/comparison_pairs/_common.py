@@ -67,7 +67,7 @@ def make_prepare(problem: BenchmarkProblem, seed: int = BENCHMARK_SEED):
     return prepare
 
 
-def skchange_run(det, X):
+def skchange_fit_predict(det, X):
     """Fit + predict for a skchange detector (the timed operation)."""
     det.fit(X)
     return det.predict_changepoints(X)

@@ -98,7 +98,7 @@ for dim in dimensions:
     if n_pairs == 0:
         continue
 
-    max_cols = 3
+    max_cols = 2
     n_cols = min(n_pairs, max_cols)
     n_rows = math.ceil(n_pairs / n_cols)
 
@@ -196,7 +196,10 @@ for dim in dimensions:
 
     metric_label = "min runtime" if METRIC == "min" else "ski-jump-mean ± std"
     fig.update_layout(
-        title=f"Runtime comparison ({metric_label}, log scale): skchange vs ruptures — p={dim}",
+        title=(
+            f"Runtime comparison ({metric_label}, log scale):"
+            + f" skchange vs ruptures — p={dim}"
+        ),
         height=400 * n_rows,
         width=500 * n_cols,
     )
