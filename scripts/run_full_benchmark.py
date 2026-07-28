@@ -48,19 +48,19 @@ class Job:
     include_fit:
         Which fit modes to run. ``[True]`` = fit+predict, ``[False]`` =
         predict only, ``[True, False]`` = both.
+    n_samples:
+        List of sample sizes to benchmark.
     distributions:
-        Null-case distributions.  ``None`` uses the problem-set default.
-    problem_set:
-        ``"small"`` or ``"full"`` problem battery.
+        Null-case distributions.  ``None`` uses the default.
     """
 
     pairs: list[Pair]
     dimensions: list[int]
     output_name: str
+    n_samples: list[int]
     min_segment_length: int = 1
-    include_fit: list[bool] = field(default_factory=lambda: [True, False])
+    include_fit: list[bool] = field(default_factory=lambda: [True])
     distributions: list[str] | None = None
-    problem_set: str = "small"
 
 
 # ---------------------------------------------------------------------------
@@ -69,19 +69,18 @@ class Job:
 # Evaluated in order; first match wins.  RUNS_DEFAULT is the fallback.
 # ---------------------------------------------------------------------------
 RUNS_REGIME: list[tuple[int, int]] = [
-    (250, 20),
-    (500, 15),
-    (1000, 10),
-    (2500, 5),
+    (250, 25),
+    (500, 20),
+    (1000, 15),
+    (2500, 10),
 ]
-RUNS_DEFAULT: int = 3
+RUNS_DEFAULT: int = 5
 
 # ---------------------------------------------------------------------------
 # Override toggle: when False, skip cases already present in existing parquet.
 # ---------------------------------------------------------------------------
-OVERRIDE_RESULTS: bool = False
-PROBLEM_SET: str = "small"  # "small" or "full"
-
+OVERRIDE_RESULTS: bool = True
+COMMON_N_SAMPLES: list[int] = [100, 250, 500, 750, 1000, 2500, 5000]
 
 # ---------------------------------------------------------------------------
 # Jobs to run
@@ -97,14 +96,14 @@ JOBS: list[Job] = [
         dimensions=[1, 2, 5],
         min_segment_length=1,
         output_name="mean_change",
-        problem_set=PROBLEM_SET,
+        n_samples=COMMON_N_SAMPLES,
     ),
     Job(
         pairs=[Pair.PELT_1D_GAUSSIAN, Pair.PELT_RANK],
         dimensions=[1, 2, 5],
         min_segment_length=6,  # must be > max(dimensions) for rank costs
         output_name="needs_min_segment_length",
-        problem_set=PROBLEM_SET,
+        n_samples=COMMON_N_SAMPLES,
     ),
     Job(
         pairs=[
@@ -116,7 +115,7 @@ JOBS: list[Job] = [
         dimensions=[2, 5],
         min_segment_length=6,  # must be > max(dimensions) for rank costs
         output_name="multivariate",
-        problem_set=PROBLEM_SET,
+        n_samples=COMMON_N_SAMPLES,
     ),
 ]
 
@@ -176,7 +175,7 @@ def _run_job(job: Job, job_idx: int, total_jobs: int) -> None:
         cases.extend(
             collect_cases(
                 pairs=job.pairs,
-                problem_set=job.problem_set,
+                n_samples_list=job.n_samples,
                 include_fit=include_fit,
                 min_segment_length=job.min_segment_length,
                 dimensions=job.dimensions,

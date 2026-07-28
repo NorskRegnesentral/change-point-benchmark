@@ -169,7 +169,7 @@ def main() -> None:
     cases = collect_cases(
         packages=[args.package],
         pairs=[Pair(args.pair)],
-        problem_set="small",
+        n_samples_list=[args.n_samples],
         include_fit=include_fit,
         dimensions=[args.dimensions],
         distributions=[args.distribution],

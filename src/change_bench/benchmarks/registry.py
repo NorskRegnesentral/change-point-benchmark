@@ -56,35 +56,23 @@ class Pair(StrEnum):
 # Problem batteries
 # ---------------------------------------------------------------------------
 
-# small_n_samples_list = [100, 250, 500, 750, 1000]
-small_n_samples_list = [100, 250, 500, 750]
-large_n_samples_list = [1000, 1500, 2500, 5000]
-
 #: All supported null-case distributions.
 ALL_DISTRIBUTIONS: list[str] = ["normal", "t", "gamma", "laplace", "exponential"]
 
-#: Default distributions per problem set.
-DEFAULT_DISTRIBUTIONS: dict[str, list[str]] = {
-    "small": ["normal"],
-    "full": ALL_DISTRIBUTIONS,
-}
+#: Default distributions when none are specified.
+DEFAULT_DISTRIBUTIONS: list[str] = ["normal"]
 
 
 def _make_problems(
-    problem_set: str,
+    n_samples_list: list[int],
     n_columns_list: list[int],
     distributions: list[str] | None = None,
 ) -> list[BenchmarkProblem]:
     """Create problem battery with given dimensions."""
-    n_samples = (
-        small_n_samples_list
-        if problem_set == "small"
-        else small_n_samples_list + large_n_samples_list
-    )
     if distributions is None:
-        distributions = DEFAULT_DISTRIBUTIONS.get(problem_set, ALL_DISTRIBUTIONS)
+        distributions = DEFAULT_DISTRIBUTIONS
     return make_null_problems(
-        n_samples_list=n_samples,
+        n_samples_list=n_samples_list,
         distributions=distributions,
         scale=1.0,
         n_columns_list=n_columns_list,
@@ -144,7 +132,8 @@ def collect_cases(
     packages: list[str] | None = None,
     pairs: list[Pair] | None = None,
     categories: list[str] | None = None,
-    problem_set: str = "small",
+    *,
+    n_samples_list: list[int],
     include_fit: bool = True,
     min_segment_length: int = 1,
     dimensions: list[int] | None = None,
@@ -164,8 +153,8 @@ def collect_cases(
         ``"multivariate"``, ``"mv_gaussian"``).
         ``None`` means all categories.  When both *pairs* and *categories*
         are given, the union is used.
-    problem_set:
-        ``"small"`` or ``"full"`` problem battery.
+    n_samples_list:
+        List of sample sizes to benchmark (required).
     include_fit:
         If ``True`` (default), the timed operation includes both ``fit`` and
         ``predict``.  If ``False``, only ``predict`` is timed.
@@ -177,15 +166,14 @@ def collect_cases(
         Default: ``[1]``.
     distributions:
         List of distribution names for the null-case data.  ``None`` uses
-        the default for the chosen *problem_set* (``"normal"`` only for
-        ``"small"``, all distributions for ``"full"``).
+        the default (``["normal"]``).
     """
     if dimensions is None:
         dimensions = [1]
 
     # Generate problems with all requested dimensions
     problems = _make_problems(
-        problem_set, n_columns_list=dimensions, distributions=distributions
+        n_samples_list, n_columns_list=dimensions, distributions=distributions
     )
 
     # Resolve which pairs to run

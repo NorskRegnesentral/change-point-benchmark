@@ -66,11 +66,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "-p",
-        "--problem-set",
-        choices=["small", "full"],
-        default="small",
-        help="Problem battery size (default: small).",
+        "--n-samples",
+        nargs="+",
+        type=int,
+        required=True,
+        help="Sample sizes to benchmark (e.g. --n-samples 100 250 500 750).",
     )
     parser.add_argument(
         "-o",
@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> None:
                 packages=args.packages,
                 pairs=parsed_pairs,
                 categories=args.categories,
-                problem_set=args.problem_set,
+                n_samples_list=args.n_samples,
                 include_fit=include_fit,
                 min_segment_length=args.min_segment_length,
                 dimensions=args.dimensions,
