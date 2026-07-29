@@ -1,15 +1,9 @@
 # %%
 """Interactive analysis of benchmark results.
 
-Loads a Parquet results file and produces comparison plots of runtime vs
-n_samples for each algorithm pair, with one line per library (skchange vs
-ruptures).
-
-Usage (standalone)::
-
-    uv run scripts/analyse_results.py results/mean_change.parquet
-
-Or interactively in an editor / REPL — just set ``results_path`` below.
+Loads one or more Parquet results file and produces comparison plots of runtime vs
+n_samples for each algorithm pair, with one line per library
+(skchange vs ruptures).
 """
 
 from __future__ import annotations
