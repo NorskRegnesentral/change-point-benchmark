@@ -1,7 +1,7 @@
 """MovingWindow + Rank cost comparison pair (multivariate only).
 
-skchange: MovingWindow(change_score=PenalisedScore(CostChangeScore(RankCost()),
-                    penalty=P), bandwidth=BW)
+skchange: MovingWindow(change_score=CostChangeScore(RankCost()),
+                    penalty=P, bandwidth=BW)
 ruptures: Window(model="rank", width=2*BW, min_size=1, jump=1)
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import CostChangeScore, PenalisedScore, RankCost
+from skchange.new_api.interval_scorers import CostChangeScore, RankCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,
@@ -23,10 +23,11 @@ JOINT_MW_RANK_PENALTY = 4.0
 
 
 def _make_sk_detector(msl: int):
-    fixed_penalty_score = PenalisedScore(
-        CostChangeScore(RankCost()), penalty=JOINT_MW_RANK_PENALTY
+    return MovingWindow(
+        change_score=CostChangeScore(RankCost()),
+        penalty=JOINT_MW_RANK_PENALTY,
+        bandwidth=MW_BANDWIDTH,
     )
-    return MovingWindow(change_score=fixed_penalty_score, bandwidth=MW_BANDWIDTH)
 
 
 _CONFIG = PairConfig(

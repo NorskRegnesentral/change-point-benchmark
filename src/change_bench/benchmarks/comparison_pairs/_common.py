@@ -145,7 +145,7 @@ def build_pair_cases(
         def sk_func(det, X, _fit=include_fit):
             if _fit:
                 det.fit(X)
-            return det.predict_changepoints(X)
+            return det.predict(X)
 
         # --- ruptures setup & func ---
         def make_rpt_setup(msl=eff_msl, fit=include_fit):

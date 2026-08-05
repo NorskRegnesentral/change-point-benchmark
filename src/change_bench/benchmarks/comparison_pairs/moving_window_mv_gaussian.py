@@ -1,7 +1,7 @@
 """MovingWindow + MultivariateGaussianScore comparison pair (multivariate).
 
-skchange: MovingWindow(change_score=PenalisedScore(
-              MultivariateGaussianScore(apply_bartlett_correction=False), penalty=P),
+skchange: MovingWindow(change_score=MultivariateGaussianScore(
+              apply_bartlett_correction=False), penalty=P,
               bandwidth=BW)
 ruptures: Window(model="normal", width=2*BW, min_size=max(msl, n_columns+1), jump=1)
 
@@ -13,10 +13,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import (
-    MultivariateGaussianScore,
-    PenalisedScore,
-)
+from skchange.new_api.interval_scorers import MultivariateGaussianScore
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,
@@ -30,11 +27,11 @@ JOINT_MW_MV_GAUSSIAN_PENALTY = 4.0
 
 
 def _make_sk_detector(msl: int):
-    fixed_penalty_score = PenalisedScore(
-        MultivariateGaussianScore(apply_bartlett_correction=False),
+    return MovingWindow(
+        change_score=MultivariateGaussianScore(apply_bartlett_correction=False),
         penalty=JOINT_MW_MV_GAUSSIAN_PENALTY,
+        bandwidth=MW_BANDWIDTH,
     )
-    return MovingWindow(change_score=fixed_penalty_score, bandwidth=MW_BANDWIDTH)
 
 
 _CONFIG = PairConfig(
@@ -58,5 +55,8 @@ def pair_moving_window_mv_gaussian(
 ) -> list[BenchmarkCase]:
     """Moving window with MultivariateGaussianScore/normal cost."""
     return build_pair_cases(
-        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+        problems,
+        _CONFIG,
+        include_fit=include_fit,
+        min_segment_length=min_segment_length,
     )

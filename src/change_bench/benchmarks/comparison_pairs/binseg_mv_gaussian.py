@@ -1,7 +1,8 @@
 """SeededBinarySegmentation + MultivariateGaussianCost comparison pair (multivariate).
 
-skchange: SeededBinarySegmentation(change_score=PenalisedScore(
-              MultivariateGaussianScore(apply_bartlett_correction=False), penalty=P))
+skchange: SeededBinarySegmentation(
+              change_score=MultivariateGaussianScore(
+                  apply_bartlett_correction=False), penalty=P)
 ruptures: Binseg(model="normal", min_size=max(msl, n_columns+1), jump=1)
 
 MultivariateGaussianCost requires min_size >= data_dimension + 1, so
@@ -12,10 +13,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.new_api.detectors import SeededBinarySegmentation
-from skchange.new_api.interval_scorers import (
-    MultivariateGaussianScore,
-    PenalisedScore,
-)
+from skchange.new_api.interval_scorers import MultivariateGaussianScore
 
 from change_bench.benchmarks.comparison_pairs._common import (
     BenchmarkCase,
@@ -28,11 +26,10 @@ JOINT_BINSEG_MV_GAUSSIAN_PENALTY = 10.0
 
 
 def _make_sk_detector(msl: int):
-    fixed_penalty_score = PenalisedScore(
-        MultivariateGaussianScore(apply_bartlett_correction=False),
+    return SeededBinarySegmentation(
+        change_score=MultivariateGaussianScore(apply_bartlett_correction=False),
         penalty=JOINT_BINSEG_MV_GAUSSIAN_PENALTY,
     )
-    return SeededBinarySegmentation(change_score=fixed_penalty_score)
 
 
 _CONFIG = PairConfig(
@@ -54,5 +51,8 @@ def pair_binseg_mv_gaussian(
 ) -> list[BenchmarkCase]:
     """Seeded binary segmentation with MultivariateGaussianScore/normal cost."""
     return build_pair_cases(
-        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+        problems,
+        _CONFIG,
+        include_fit=include_fit,
+        min_segment_length=min_segment_length,
     )

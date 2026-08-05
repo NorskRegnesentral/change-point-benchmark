@@ -1,6 +1,8 @@
 """Binary Segmentation + CUSUM / L2 comparison pair.
 
-skchange: SeededBinarySegmentation(change_score=CUSUM())
+skchange: SeededBinarySegmentation(
+    change_score=CostChangeScore(L2Cost()), penalty=JOINT_PENALTY
+)
 ruptures: Binseg(model="l2", min_size=1, jump=1)
 """
 
@@ -8,11 +10,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.new_api.detectors import SeededBinarySegmentation
-from skchange.new_api.interval_scorers import (
-    CostChangeScore,
-    L2Cost,
-    PenalisedScore,
-)
+from skchange.new_api.interval_scorers import CostChangeScore, L2Cost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     BenchmarkCase,
@@ -25,10 +23,9 @@ JOINT_PENALTY = 10.0
 
 
 def _make_sk_detector(msl: int):
-    fixed_penalty_score = PenalisedScore(
-        CostChangeScore(L2Cost()), penalty=JOINT_PENALTY
+    return SeededBinarySegmentation(
+        change_score=CostChangeScore(L2Cost()), penalty=JOINT_PENALTY
     )
-    return SeededBinarySegmentation(change_score=fixed_penalty_score)
 
 
 _CONFIG = PairConfig(
@@ -49,5 +46,8 @@ def pair_binseg_l2_cusum(
 ) -> list[BenchmarkCase]:
     """Binary segmentation with CUSUM/L2 — skchange vs ruptures."""
     return build_pair_cases(
-        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+        problems,
+        _CONFIG,
+        include_fit=include_fit,
+        min_segment_length=min_segment_length,
     )

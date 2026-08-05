@@ -1,7 +1,7 @@
 """MovingWindow + L1 cost comparison pair (explicit bandwidth).
 
 skchange: MovingWindow(
-    change_score=PenalisedScore(CostChangeScore(L1Cost()), penalty=JOINT_MW_L1_PENALTY),
+    change_score=CostChangeScore(L1Cost()), penalty=JOINT_MW_L1_PENALTY,
     bandwidth=BW
 )
 ruptures: Window(model="l1", width=2*BW, min_size=1, jump=1)
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import CostChangeScore, L1Cost, PenalisedScore
+from skchange.new_api.interval_scorers import CostChangeScore, L1Cost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,
@@ -25,10 +25,11 @@ JOINT_MW_L1_PENALTY = 2.0
 
 
 def _make_sk_detector(msl: int):
-    fixed_penalty_score = PenalisedScore(
-        CostChangeScore(L1Cost()), penalty=JOINT_MW_L1_PENALTY
+    return MovingWindow(
+        change_score=CostChangeScore(L1Cost()),
+        penalty=JOINT_MW_L1_PENALTY,
+        bandwidth=MW_BANDWIDTH,
     )
-    return MovingWindow(change_score=fixed_penalty_score, bandwidth=MW_BANDWIDTH)
 
 
 _CONFIG = PairConfig(

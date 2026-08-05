@@ -6,7 +6,7 @@ produce equivalent results (exact for PELT, within tolerance for
 MovingWindow/BinSeg due to different peak-selection logic).
 
 Uses the same numeric penalty for both libraries:
-- skchange: PenalisedScore(scorer, penalty=P)  or  PELT(cost=..., penalty=P)
+- skchange: Detector(change_score=scorer, penalty=P) or PELT(cost=..., penalty=P)
 - ruptures: .predict(pen=P)
 """
 
@@ -28,7 +28,6 @@ from skchange.new_api.interval_scorers import (
     L1Cost,
     L2Cost,
     MultivariateGaussianCost,
-    PenalisedScore,
     PoissonCost,
     RankCost,
 )
@@ -136,7 +135,7 @@ class TestPeltL2Agreement:
         # skchange
         sk_det = SkchangePELT(cost=L2Cost(), penalty=TEST_PENALTY, min_segment_length=1)
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.KernelCPD(kernel="linear", min_size=1, jump=1)
@@ -160,7 +159,7 @@ class TestPeltL2Agreement:
 
         sk_det = SkchangePELT(cost=L2Cost(), penalty=TEST_PENALTY, min_segment_length=1)
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # With strong signal (mean shift = 5), both should find ~[100, 200]
         _assert_changepoints_close(sk_cps, changepoints, tolerance=5)
@@ -185,7 +184,7 @@ class TestPelt1dGaussianAgreement:
             cost=GaussianCost(), penalty=TEST_PENALTY, min_segment_length=2
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Pelt(model="normal", min_size=2, jump=1)
@@ -211,7 +210,7 @@ class TestPelt1dGaussianAgreement:
             cost=GaussianCost(), penalty=TEST_PENALTY, min_segment_length=2
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # GaussianCost models mean+variance, so it may find extra changes.
         # Just verify the true change points are among those detected.
@@ -255,7 +254,7 @@ class TestPeltPoissonAgreement:
             cost=PoissonCost(), penalty=TEST_PENALTY, min_segment_length=1
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Pelt(custom_cost=CostPoisson(), min_size=1, jump=1)
@@ -274,7 +273,7 @@ class TestPeltPoissonAgreement:
             cost=PoissonCost(), penalty=TEST_PENALTY, min_segment_length=1
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         _assert_changepoints_close(sk_cps, self.CHANGEPOINTS, tolerance=5)
 
@@ -299,7 +298,7 @@ class TestPeltRankAgreement:
             cost=RankCost(), penalty=TEST_PENALTY, min_segment_length=2
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Pelt(model="rank", min_size=2, jump=1)
@@ -326,7 +325,7 @@ class TestPeltRankAgreement:
             cost=RankCost(), penalty=TEST_PENALTY, min_segment_length=2
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         _assert_changepoints_close(sk_cps, changepoints, tolerance=5)
 
@@ -349,13 +348,12 @@ class TestMovingWindowL2Agreement:
 
         # skchange
         sk_det = MovingWindow(
-            change_score=PenalisedScore(
-                CostChangeScore(L2Cost()), penalty=SKCHANGE_MW_PENALTY
-            ),
+            change_score=CostChangeScore(L2Cost()),
+            penalty=SKCHANGE_MW_PENALTY,
             bandwidth=bw,
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Window(model="l2", width=2 * bw, min_size=1, jump=1)
@@ -396,13 +394,12 @@ class TestMovingWindowL1Agreement:
 
         # skchange
         sk_det = MovingWindow(
-            change_score=PenalisedScore(
-                CostChangeScore(L1Cost()), penalty=SKCHANGE_MW_PENALTY
-            ),
+            change_score=CostChangeScore(L1Cost()),
+            penalty=SKCHANGE_MW_PENALTY,
             bandwidth=bw,
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Window(model="l1", width=2 * bw, min_size=1, jump=1)
@@ -443,13 +440,12 @@ class TestMovingWindowRankAgreement:
 
         # skchange
         sk_det = MovingWindow(
-            change_score=PenalisedScore(
-                CostChangeScore(RankCost()), penalty=SKCHANGE_MW_PENALTY
-            ),
+            change_score=CostChangeScore(RankCost()),
+            penalty=SKCHANGE_MW_PENALTY,
             bandwidth=bw,
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Window(model="rank", width=2 * bw, min_size=1, jump=1)
@@ -494,12 +490,11 @@ class TestBinSegAgreement:
 
         # skchange
         sk_det = SeededBinarySegmentation(
-            change_score=PenalisedScore(
-                CostChangeScore(L2Cost()), penalty=SKCHANGE_BINSEG_PENALTY
-            ),
+            change_score=CostChangeScore(L2Cost()),
+            penalty=SKCHANGE_BINSEG_PENALTY,
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Binseg(model="l2", min_size=1, jump=1)
@@ -559,7 +554,7 @@ class TestPeltMvGaussianAgreement:
             min_segment_length=min_seg,
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Pelt(model="normal", min_size=min_seg, jump=1)
@@ -622,13 +617,13 @@ class TestPeltMvGaussianAgreement:
             min_segment_length=min_seg,
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         _assert_changepoints_close(sk_cps, changepoints, tolerance=5)
 
 
 class TestMovingWindowMvGaussianAgreement:
-    """MovingWindow + MultivariateGaussianCost: skchange vs ruptures Window(model='normal')."""
+    """Compare MovingWindow with multivariate Gaussian costs."""
 
     def test_both_find_known_changepoints_multivariate(self):
         rng = np.random.default_rng(42)
@@ -646,14 +641,12 @@ class TestMovingWindowMvGaussianAgreement:
 
         # skchange
         sk_det = MovingWindow(
-            change_score=PenalisedScore(
-                CostChangeScore(MultivariateGaussianCost()),
-                penalty=SKCHANGE_MW_MV_GAUSSIAN_PENALTY,
-            ),
+            change_score=CostChangeScore(MultivariateGaussianCost()),
+            penalty=SKCHANGE_MW_MV_GAUSSIAN_PENALTY,
             bandwidth=bw,
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Window(model="normal", width=2 * bw, min_size=min_seg, jump=1)
@@ -679,7 +672,7 @@ class TestMovingWindowMvGaussianAgreement:
 
 
 class TestBinSegMvGaussianAgreement:
-    """SeededBinarySegmentation + MultivariateGaussianCost vs ruptures Binseg(model='normal')."""
+    """Compare binary segmentation with multivariate Gaussian costs."""
 
     def test_both_find_known_changepoints_multivariate(self):
         rng = np.random.default_rng(42)
@@ -696,13 +689,11 @@ class TestBinSegMvGaussianAgreement:
 
         # skchange
         sk_det = SeededBinarySegmentation(
-            change_score=PenalisedScore(
-                CostChangeScore(MultivariateGaussianCost()),
-                penalty=SKCHANGE_BINSEG_MV_GAUSSIAN_PENALTY,
-            ),
+            change_score=CostChangeScore(MultivariateGaussianCost()),
+            penalty=SKCHANGE_BINSEG_MV_GAUSSIAN_PENALTY,
         )
         sk_det.fit(data)
-        sk_cps = sorted(sk_det.predict_changepoints(data).tolist())
+        sk_cps = sorted(sk_det.predict(data).tolist())
 
         # ruptures
         rpt_algo = rpt.Binseg(model="normal", min_size=min_seg, jump=1)

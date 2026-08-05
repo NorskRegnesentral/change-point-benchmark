@@ -175,3 +175,36 @@ The running times of the following calls are recorded:
 - ruptures: detector.fit_predict(X, pen=penalty), where penalty is set to the same value as the corresponding skchange detector's penalty parameter.
 
 Otherwise, parameters are set to make the algorithms as comparable as possible, e.g. minimum segment length, window sizes, jump sizes etc.
+
+# TODO: Generere figurene og legge inn i README. 
+# + Hvordan generere data + figurene selv.
+
+# TODO: 
+Kovarians pre-compute: (X[rad-observasjoner, kolonne-variabler]).
+# cov(i, j) = sum(n = i)^j X[i, :]^T * X[i, :]
+# Profilere "MvGaussian" for "p=5", lavere n <= 1000.
+ - Hvor stor andel av vår tid brukes i Numba vs. Python.
+
+# Figur for utforskning:
+- Alle change-in-mean varianter: Med samme kostnad (L2).
+  - Får en felles oversikt, og kan sammenligne 
+    forskjellige algoritmer på samme skala. Er vår 
+    "moving window + L2" raskere enn deres "Pelt + L2". 
+    (per dimensjon, [1, 2, 5])
+  - Skille på farge [skchange, ruptures] og linjetype [alg.].
+
+
+- Figur for "multivariate change detection":
+  - N samples konstant (1000), øke p 
+    gjennom p (1, 5, 10, 50, 100, 500)
+  - Mv-kostnader:
+    - L2
+    - Esac (uten sammenligning)
+    - MvGaussian
+    - MvRank
+  - Søkealgoritmer:
+    - MovingWindow
+    - SeededBinary
+    - PELT
+
+

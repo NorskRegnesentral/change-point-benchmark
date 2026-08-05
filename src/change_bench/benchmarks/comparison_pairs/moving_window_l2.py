@@ -1,6 +1,6 @@
 """MovingWindow + L2 cost comparison pair (explicit bandwidth).
 
-skchange: MovingWindow(change_score=PenalisedScore(CUSUM(), penalty=P), bandwidth=BW)
+skchange: MovingWindow(change_score=CUSUM(), penalty=P, bandwidth=BW)
 ruptures: Window(model="l2", width=2*BW, min_size=1, jump=1)
 """
 
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import CUSUM, PenalisedScore
+from skchange.new_api.interval_scorers import CUSUM
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,
@@ -22,8 +22,11 @@ JOINT_MW_L2_PENALTY = 4.0
 
 
 def _make_sk_detector(msl: int):
-    fixed_penalty_score = PenalisedScore(CUSUM(), penalty=JOINT_MW_L2_PENALTY)
-    return MovingWindow(change_score=fixed_penalty_score, bandwidth=MW_BANDWIDTH)
+    return MovingWindow(
+        change_score=CUSUM(),
+        penalty=JOINT_MW_L2_PENALTY,
+        bandwidth=MW_BANDWIDTH,
+    )
 
 
 _CONFIG = PairConfig(
