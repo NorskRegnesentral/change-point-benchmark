@@ -2,7 +2,7 @@
 
 Each submodule defines a single ``pair_*()`` factory function that returns
 a list of :class:`~change_bench.benchmarks.comparison_pairs._common.BenchmarkCase`
-instances (one for skchange, one for ruptures) for every problem it receives.
+instances for every supported package and problem it receives.
 """
 
 from change_bench.benchmarks.comparison_pairs._common import (
@@ -11,8 +11,13 @@ from change_bench.benchmarks.comparison_pairs._common import (
     build_pair_cases,
 )
 from change_bench.benchmarks.comparison_pairs.binseg import pair_binseg_l2_cusum
+from change_bench.benchmarks.comparison_pairs.binseg_esac import pair_binseg_esac
 from change_bench.benchmarks.comparison_pairs.binseg_mv_gaussian import (
     pair_binseg_mv_gaussian,
+)
+from change_bench.benchmarks.comparison_pairs.binseg_rank import pair_binseg_rank
+from change_bench.benchmarks.comparison_pairs.moving_window_esac import (
+    pair_moving_window_esac,
 )
 from change_bench.benchmarks.comparison_pairs.moving_window_l1 import (
     pair_moving_window_l1,
@@ -47,8 +52,11 @@ __all__ = [
     "CostPoisson",
     "PairConfig",
     "build_pair_cases",
+    "pair_binseg_esac",
     "pair_binseg_l2_cusum",
     "pair_binseg_mv_gaussian",
+    "pair_binseg_rank",
+    "pair_moving_window_esac",
     "pair_moving_window_l1",
     "pair_moving_window_l2",
     "pair_moving_window_mv_gaussian",

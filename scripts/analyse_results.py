@@ -50,6 +50,7 @@ METRIC: str = "min"  # "ski-jump-mean" or "min"
 # ---------------------------------------------------------------------------
 project_dir = Path(__file__).parent.parent
 results_dir: Path = project_dir / "results"
+# results_dir: Path = project_dir / "old_results"
 
 if not results_dir.exists():
     print(f"Error: results directory not found at {results_dir}")

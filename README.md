@@ -111,9 +111,9 @@ problems = make_null_problems(
 
 ### Benchmarks
 
-Benchmarks are organised as **comparison pairs**: each pair contains one
-skchange detector and its equivalent ruptures detector so that timing
-differences are directly attributable to the implementation.
+Benchmarks are organised as **comparison pairs**. Most pairs contain a
+skchange detector and its equivalent ruptures detector; one-sided pairs are
+also supported when no meaningful counterpart exists, such as ESAC.
 
 The CLI (`uv run bench`) times each case using a two-phase protocol:
 
@@ -142,6 +142,9 @@ uv run bench --list
 
 # Run specific pairs with multivariate data
 uv run bench --pairs pelt_l2 moving_window_rank --dimensions 1 2 5 --runs 10
+
+# Run the fixed-n, increasing-dimension benchmark
+uv run python scripts/run_multivariate_dimension_benchmark.py
 ```
 
 ## Ruptures - Skchange comparison pairs
@@ -179,9 +182,11 @@ Otherwise, parameters are set to make the algorithms as comparable as possible, 
 # TODO: Generere figurene og legge inn i README. 
 # + Hvordan generere data + figurene selv.
 
-# TODO: 
+# TODO:
 Kovarians pre-compute: (X[rad-observasjoner, kolonne-variabler]).
 # cov(i, j) = sum(n = i)^j X[i, :]^T * X[i, :]
+
+# Gjort:
 # Profilere "MvGaussian" for "p=5", lavere n <= 1000.
  - Hvor stor andel av vår tid brukes i Numba vs. Python.
 

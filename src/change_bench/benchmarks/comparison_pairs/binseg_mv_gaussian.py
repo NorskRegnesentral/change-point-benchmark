@@ -29,6 +29,7 @@ def _make_sk_detector(msl: int):
     return SeededBinarySegmentation(
         change_score=MultivariateGaussianScore(apply_bartlett_correction=False),
         penalty=JOINT_BINSEG_MV_GAUSSIAN_PENALTY,
+        max_interval_length=max(200, 2 * msl),
     )
 
 

@@ -30,7 +30,7 @@ def _make_sk_detector(msl: int):
     return MovingWindow(
         change_score=MultivariateGaussianScore(apply_bartlett_correction=False),
         penalty=JOINT_MW_MV_GAUSSIAN_PENALTY,
-        bandwidth=MW_BANDWIDTH,
+        bandwidth=max(MW_BANDWIDTH, msl),
     )
 
 
@@ -41,7 +41,7 @@ _CONFIG = PairConfig(
     rpt_name_prefix="ruptures_window_normal",
     make_sk_detector=_make_sk_detector,
     make_rpt_algo=lambda msl: rpt.Window(
-        model="normal", width=2 * MW_BANDWIDTH, min_size=msl, jump=1
+        model="normal", width=2 * max(MW_BANDWIDTH, msl), min_size=msl, jump=1
     ),
     effective_msl=lambda msl, n_cols: max(msl, n_cols + 1),
 )

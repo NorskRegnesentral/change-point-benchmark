@@ -24,6 +24,7 @@ from skchange.new_api.detectors import (
 )
 from skchange.new_api.interval_scorers import (
     CostChangeScore,
+    ESACScore,
     GaussianCost,
     L1Cost,
     L2Cost,
@@ -33,8 +34,15 @@ from skchange.new_api.interval_scorers import (
 )
 
 from change_bench.benchmarks.comparison_pairs._common import MW_BANDWIDTH, PELT_PENALTY
+from change_bench.benchmarks.comparison_pairs.binseg_mv_gaussian import (
+    pair_binseg_mv_gaussian,
+)
+from change_bench.benchmarks.comparison_pairs.binseg_rank import (
+    JOINT_BINSEG_RANK_PENALTY,
+)
 from change_bench.benchmarks.comparison_pairs.pelt_poisson import CostPoisson
 from change_bench.datasets.change_case import ChangeDatasetConfig, SegmentParams
+from change_bench.problems.base import make_null_problems
 
 # ---------------------------------------------------------------------------
 # Shared test fixtures and helpers
@@ -517,6 +525,57 @@ class TestBinSegAgreement:
         )
 
 
+class TestEsacDetection:
+    """ESAC works with both supported skchange search algorithms."""
+
+    @pytest.mark.parametrize("search", ["moving_window", "seeded_binseg"])
+    def test_detects_known_multivariate_changepoint(self, search: str):
+        rng = np.random.default_rng(42)
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=[150],
+            means=[0.0, 5.0],
+            n_columns=5,
+        )
+        if search == "moving_window":
+            detector = MovingWindow(change_score=ESACScore(), bandwidth=MW_BANDWIDTH)
+        else:
+            detector = SeededBinarySegmentation(change_score=ESACScore())
+
+        detected = detector.fit_predict(data).tolist()
+
+        _assert_changepoints_close(detected, [150], tolerance=5)
+
+
+class TestBinSegRankAgreement:
+    """Seeded binary segmentation and ruptures both recover a rank change."""
+
+    def test_both_find_known_changepoint(self):
+        rng = np.random.default_rng(42)
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=[150],
+            means=[0.0, 5.0],
+            n_columns=5,
+        )
+
+        sk_detector = SeededBinarySegmentation(
+            change_score=CostChangeScore(RankCost()),
+            penalty=JOINT_BINSEG_RANK_PENALTY,
+        )
+        sk_changepoints = sk_detector.fit_predict(data).tolist()
+
+        rpt_algorithm = rpt.Binseg(model="rank", min_size=2, jump=1).fit(data)
+        rpt_changepoints = _strip_endpoint(
+            rpt_algorithm.predict(pen=JOINT_BINSEG_RANK_PENALTY), len(data)
+        )
+
+        assert any(abs(changepoint - 150) <= 5 for changepoint in sk_changepoints)
+        assert any(abs(changepoint - 150) <= 5 for changepoint in rpt_changepoints)
+
+
 # ---------------------------------------------------------------------------
 # MultivariateGaussianCost pair agreement tests (multivariate only)
 # ---------------------------------------------------------------------------
@@ -716,3 +775,19 @@ class TestBinSegMvGaussianAgreement:
             tolerance=TOLERANCE,
             msg="ruptures Binseg normal (multivariate): ",
         )
+
+    def test_high_dimension_uses_valid_max_interval_length(self):
+        n_columns = 101
+        problems = make_null_problems(
+            n_samples_list=[300],
+            distributions=["normal"],
+            scale=1.0,
+            n_columns_list=[n_columns],
+        )
+        sk_case = pair_binseg_mv_gaussian(problems)[0]
+        detector, data = sk_case.setup(sk_case.prepare())[0]
+
+        detector.fit(data)
+
+        assert detector.min_subinterval_length_ == n_columns + 1
+        assert detector.max_interval_length_ == 2 * (n_columns + 1)

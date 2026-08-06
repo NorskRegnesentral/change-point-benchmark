@@ -17,8 +17,11 @@ from enum import StrEnum
 
 from change_bench.benchmarks.comparison_pairs import (
     BenchmarkCase,
+    pair_binseg_esac,
     pair_binseg_l2_cusum,
     pair_binseg_mv_gaussian,
+    pair_binseg_rank,
+    pair_moving_window_esac,
     pair_moving_window_l1,
     pair_moving_window_l2,
     pair_moving_window_mv_gaussian,
@@ -45,8 +48,11 @@ class Pair(StrEnum):
     PELT_RANK = "pelt_rank"
     MOVING_WINDOW_L2 = "moving_window_l2"
     MOVING_WINDOW_L1 = "moving_window_l1"
+    MOVING_WINDOW_ESAC = "moving_window_esac"
     MOVING_WINDOW_RANK = "moving_window_rank"
     BINSEG_L2_CUSUM = "binseg_l2_cusum"
+    BINSEG_ESAC = "binseg_esac"
+    BINSEG_RANK = "binseg_rank"
     BINSEG_MV_GAUSSIAN = "binseg_mv_gaussian"
     PELT_MV_GAUSSIAN = "pelt_mv_gaussian"
     MOVING_WINDOW_MV_GAUSSIAN = "moving_window_mv_gaussian"
@@ -89,8 +95,11 @@ BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
     Pair.PELT_RANK: pair_pelt_rank,
     Pair.MOVING_WINDOW_L2: pair_moving_window_l2,
     Pair.MOVING_WINDOW_L1: pair_moving_window_l1,
+    Pair.MOVING_WINDOW_ESAC: pair_moving_window_esac,
     Pair.MOVING_WINDOW_RANK: pair_moving_window_rank,
     Pair.BINSEG_L2_CUSUM: pair_binseg_l2_cusum,
+    Pair.BINSEG_ESAC: pair_binseg_esac,
+    Pair.BINSEG_RANK: pair_binseg_rank,
     Pair.BINSEG_MV_GAUSSIAN: pair_binseg_mv_gaussian,
     Pair.PELT_MV_GAUSSIAN: pair_pelt_mv_gaussian,
     Pair.MOVING_WINDOW_MV_GAUSSIAN: pair_moving_window_mv_gaussian,
@@ -102,7 +111,13 @@ NON_MULTIVARIATE_PAIRS: set[Pair] = {Pair.PELT_1D_GAUSSIAN}
 
 #: Pairs that ONLY make sense for multivariate data (p > 1).
 #: Pairs in this set will only receive problems where p > 1.
-MULTIVARIATE_ONLY_PAIRS: set[Pair] = {Pair.MOVING_WINDOW_RANK, Pair.PELT_RANK}
+MULTIVARIATE_ONLY_PAIRS: set[Pair] = {
+    Pair.MOVING_WINDOW_ESAC,
+    Pair.MOVING_WINDOW_RANK,
+    Pair.BINSEG_ESAC,
+    Pair.BINSEG_RANK,
+    Pair.PELT_RANK,
+}
 
 PAIR_CATEGORIES: dict[str, list[Pair]] = {
     "mean_change": [
@@ -124,6 +139,19 @@ PAIR_CATEGORIES: dict[str, list[Pair]] = {
         Pair.PELT_MV_GAUSSIAN,
         Pair.MOVING_WINDOW_MV_GAUSSIAN,
         Pair.BINSEG_MV_GAUSSIAN,
+    ],
+    "multivariate_dimension": [
+        Pair.PELT_L2,
+        Pair.MOVING_WINDOW_L2,
+        Pair.BINSEG_L2_CUSUM,
+        Pair.MOVING_WINDOW_ESAC,
+        Pair.BINSEG_ESAC,
+        Pair.PELT_MV_GAUSSIAN,
+        Pair.MOVING_WINDOW_MV_GAUSSIAN,
+        Pair.BINSEG_MV_GAUSSIAN,
+        Pair.PELT_RANK,
+        Pair.MOVING_WINDOW_RANK,
+        Pair.BINSEG_RANK,
     ],
 }
 

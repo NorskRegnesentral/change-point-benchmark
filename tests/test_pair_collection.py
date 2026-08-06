@@ -1,0 +1,64 @@
+"""Tests for two-sided and one-sided benchmark case collection."""
+
+from __future__ import annotations
+
+import pytest
+
+from change_bench.benchmarks.comparison_pairs._common import PairConfig
+from change_bench.benchmarks.registry import Pair, collect_cases
+
+
+def test_existing_pair_collects_both_packages():
+    cases = collect_cases(
+        pairs=[Pair.PELT_L2],
+        n_samples_list=[100],
+        dimensions=[5],
+    )
+
+    assert {case.package for case in cases} == {"skchange", "ruptures"}
+
+
+@pytest.mark.parametrize(
+    "pair",
+    [Pair.MOVING_WINDOW_ESAC, Pair.BINSEG_ESAC],
+)
+def test_esac_pair_collects_only_skchange(pair: Pair):
+    cases = collect_cases(
+        pairs=[pair],
+        n_samples_list=[100],
+        dimensions=[5],
+    )
+
+    assert len(cases) == 1
+    assert cases[0].package == "skchange"
+
+
+def test_package_filter_handles_one_sided_pair():
+    common = {
+        "pairs": [Pair.MOVING_WINDOW_ESAC],
+        "n_samples_list": [100],
+        "dimensions": [5],
+    }
+
+    assert len(collect_cases(packages=["skchange"], **common)) == 1
+    assert collect_cases(packages=["ruptures"], **common) == []
+
+
+def test_pair_config_requires_at_least_one_side():
+    with pytest.raises(ValueError, match="at least one benchmark side"):
+        PairConfig(pair_name="empty")
+
+
+def test_multivariate_dimension_category_matrix():
+    dimensions = [5, 10, 50, 100, 500]
+    cases = collect_cases(
+        categories=["multivariate_dimension"],
+        n_samples_list=[2000],
+        dimensions=dimensions,
+    )
+
+    assert len(cases) == 100
+    assert {case.data_dimension for case in cases} == set(dimensions)
+    esac_cases = [case for case in cases if "esac" in case.cpd_algorithm]
+    assert len(esac_cases) == 10
+    assert {case.package for case in esac_cases} == {"skchange"}

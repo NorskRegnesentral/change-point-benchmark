@@ -62,15 +62,15 @@ class PairConfig:
     ----------
     pair_name : str
         Identifier for the pair, e.g. "pelt_l2".
-    penalty : float
+    penalty : float | None
         Penalty passed to ruptures' .predict(pen=...).
-    sk_name_prefix : str
+    sk_name_prefix : str | None
         Prefix for skchange benchmark case names.
-    rpt_name_prefix : str
+    rpt_name_prefix : str | None
         Prefix for ruptures benchmark case names.
-    make_sk_detector : Callable[[int], Any]
+    make_sk_detector : Callable[[int], Any] | None
         Factory: (effective_msl) -> configured skchange detector instance.
-    make_rpt_algo : Callable[[int], Any]
+    make_rpt_algo : Callable[[int], Any] | None
         Factory: (effective_msl) -> configured ruptures algo instance.
     effective_msl : Callable[[int, int], int]
         (min_segment_length, n_columns) -> actual msl to use.
@@ -80,13 +80,24 @@ class PairConfig:
     """
 
     pair_name: str
-    penalty: float
-    sk_name_prefix: str
-    rpt_name_prefix: str
-    make_sk_detector: Callable[[int], Any]
-    make_rpt_algo: Callable[[int], Any]
+    penalty: float | None = None
+    sk_name_prefix: str | None = None
+    rpt_name_prefix: str | None = None
+    make_sk_detector: Callable[[int], Any] | None = None
+    make_rpt_algo: Callable[[int], Any] | None = None
     effective_msl: Callable[[int, int], int] = field(default=_default_effective_msl)
     prepare_transform: Callable[[np.ndarray], np.ndarray] | None = None
+
+    def __post_init__(self) -> None:
+        if self.make_sk_detector is None and self.make_rpt_algo is None:
+            raise ValueError("PairConfig must define at least one benchmark side")
+        if self.make_sk_detector is not None and self.sk_name_prefix is None:
+            raise ValueError("sk_name_prefix is required for the skchange side")
+        if self.make_rpt_algo is not None:
+            if self.rpt_name_prefix is None:
+                raise ValueError("rpt_name_prefix is required for the ruptures side")
+            if self.penalty is None:
+                raise ValueError("penalty is required for the ruptures side")
 
 
 def make_prepare(problem: BenchmarkProblem, seed: int = BENCHMARK_SEED):
@@ -132,67 +143,65 @@ def build_pair_cases(
             data = base()
             return t(data) if t is not None else data
 
-        # --- skchange setup & func ---
-        def make_sk_setup(msl=eff_msl, fit=include_fit):
-            def setup(data: np.ndarray):
-                det = config.make_sk_detector(msl)
+        if config.make_sk_detector is not None:
+            make_sk_detector = config.make_sk_detector
+
+            def sk_setup(data: np.ndarray, msl=eff_msl, fit=include_fit):
+                detector = make_sk_detector(msl)
                 if not fit:
-                    det.fit(data)
-                return (det, data), {}
+                    detector.fit(data)
+                return (detector, data), {}
 
-            return setup
+            def sk_func(detector, X, fit=include_fit):
+                if fit:
+                    detector.fit(X)
+                return detector.predict(X)
 
-        def sk_func(det, X, _fit=include_fit):
-            if _fit:
-                det.fit(X)
-            return det.predict(X)
+            cases.append(
+                BenchmarkCase(
+                    package="skchange",
+                    cpd_algorithm=config.pair_name,
+                    name=f"{config.sk_name_prefix}/{problem.name}",
+                    n_samples=cfg.n_samples,
+                    n_changepoints=len(problem.true_changepoints),
+                    data_dimension=cfg.n_columns,
+                    include_fit=include_fit,
+                    min_segment_length=eff_msl,
+                    prepare=prepare,
+                    setup=sk_setup,
+                    func=sk_func,
+                )
+            )
 
-        # --- ruptures setup & func ---
-        def make_rpt_setup(msl=eff_msl, fit=include_fit):
-            def setup(data: np.ndarray):
-                algo = config.make_rpt_algo(msl)
+        if config.make_rpt_algo is not None:
+            make_rpt_algo = config.make_rpt_algo
+            penalty = config.penalty
+
+            def rpt_setup(data: np.ndarray, msl=eff_msl, fit=include_fit):
+                algorithm = make_rpt_algo(msl)
                 if not fit:
-                    algo.fit(data)
-                return (algo, data), {}
+                    algorithm.fit(data)
+                return (algorithm, data), {}
 
-            return setup
+            def rpt_func(algorithm, X, fit=include_fit, pen=penalty):
+                if fit:
+                    algorithm.fit(X)
+                return algorithm.predict(pen=pen)
 
-        def rpt_func(algo, X, _fit=include_fit, _pen=config.penalty):
-            if _fit:
-                algo.fit(X)
-            return algo.predict(pen=_pen)
-
-        # --- cases ---
-        cases.append(
-            BenchmarkCase(
-                package="skchange",
-                cpd_algorithm=config.pair_name,
-                name=f"{config.sk_name_prefix}/{problem.name}",
-                n_samples=cfg.n_samples,
-                n_changepoints=len(problem.true_changepoints),
-                data_dimension=cfg.n_columns,
-                include_fit=include_fit,
-                min_segment_length=eff_msl,
-                prepare=prepare,
-                setup=make_sk_setup(),
-                func=sk_func,
+            cases.append(
+                BenchmarkCase(
+                    package="ruptures",
+                    cpd_algorithm=config.pair_name,
+                    name=f"{config.rpt_name_prefix}/{problem.name}",
+                    n_samples=cfg.n_samples,
+                    n_changepoints=len(problem.true_changepoints),
+                    data_dimension=cfg.n_columns,
+                    include_fit=include_fit,
+                    min_segment_length=eff_msl,
+                    prepare=prepare,
+                    setup=rpt_setup,
+                    func=rpt_func,
+                )
             )
-        )
-
-        cases.append(
-            BenchmarkCase(
-                package="ruptures",
-                cpd_algorithm=config.pair_name,
-                name=f"{config.rpt_name_prefix}/{problem.name}",
-                n_samples=cfg.n_samples,
-                n_changepoints=len(problem.true_changepoints),
-                data_dimension=cfg.n_columns,
-                include_fit=include_fit,
-                min_segment_length=eff_msl,
-                prepare=prepare,
-                setup=make_rpt_setup(),
-                func=rpt_func,
-            )
-        )
 
     return cases
