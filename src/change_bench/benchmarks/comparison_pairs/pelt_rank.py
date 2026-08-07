@@ -27,6 +27,7 @@ _CONFIG = PairConfig(
         cost=RankCost(), penalty=PELT_PENALTY, min_segment_length=msl
     ),
     make_rpt_algo=lambda msl: rpt.Pelt(model="rank", min_size=msl, jump=1),
+    effective_msl=lambda msl, n_cols: max(msl, 2),
 )
 
 
@@ -38,5 +39,8 @@ def pair_pelt_rank(
 ) -> list[BenchmarkCase]:
     """PELT with Rank cost — skchange vs ruptures."""
     return build_pair_cases(
-        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+        problems,
+        _CONFIG,
+        include_fit=include_fit,
+        min_segment_length=min_segment_length,
     )

@@ -18,6 +18,17 @@ def test_existing_pair_collects_both_packages():
     assert {case.package for case in cases} == {"skchange", "ruptures"}
 
 
+def test_pelt_rank_enforces_cost_minimum_segment_length():
+    cases = collect_cases(
+        pairs=[Pair.PELT_RANK],
+        n_samples_list=[100],
+        dimensions=[5],
+        min_segment_length=1,
+    )
+
+    assert {case.min_segment_length for case in cases} == {2}
+
+
 @pytest.mark.parametrize(
     "pair",
     [Pair.MOVING_WINDOW_ESAC, Pair.BINSEG_ESAC],

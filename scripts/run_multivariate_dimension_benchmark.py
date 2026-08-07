@@ -41,7 +41,7 @@ PAIRS: list[Pair] = [
     Pair.PELT_MV_GAUSSIAN,
 ]
 N_SAMPLES: int = 2000
-DIMENSIONS: list[int] = [5, 10, 25, 50, 100, 250, 500]
+DIMENSIONS: list[int] = [5, 10, 25, 50, 100, 200]
 MIN_SEGMENT_LENGTH: int = 1
 INCLUDE_FIT: bool = True
 DISTRIBUTIONS: list[str] = ["normal"]
