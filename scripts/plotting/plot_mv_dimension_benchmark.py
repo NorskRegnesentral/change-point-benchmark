@@ -114,6 +114,7 @@ def main() -> None:
                 legend_name = f"{package} — {SEARCH_LABELS[search]}"
                 show_legend = legend_name not in shown_legends
                 shown_legends.add(legend_name)
+                is_skchange = package == "skchange"
 
                 dims = line_df["data_dimension"].to_list()
                 values = line_df["value"].to_list()
@@ -122,7 +123,8 @@ def main() -> None:
                         x=dims,
                         y=values,
                         mode="lines+markers",
-                        name=legend_name,
+                        name="\u00a0",
+                        legend="legend" if is_skchange else "legend2",
                         legendgroup=legend_name,
                         showlegend=show_legend,
                         line=dict(color=color, dash=dash, width=2),
@@ -161,24 +163,63 @@ def main() -> None:
     for row_idx in range(1, n_rows + 1):
         fig.update_yaxes(title_text="runtime (s)", row=row_idx, col=1)
 
+    # Label-only legend column: invisible traces carry the algorithm names.
+    for label in SEARCH_LABELS.values():
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                mode="lines",
+                name=label,
+                legend="legend3",
+                showlegend=True,
+                line=dict(color="rgba(0,0,0,0)"),
+                hoverinfo="skip",
+            )
+        )
+
     n_label = ", ".join(str(n) for n in sorted(n_samples))
     fig.update_layout(
         title=(
             f"Multivariate change detection benchmark (n = {n_label}):"
             " runtime vs. dimension"
-            "<br><sup>Color = package, line style + marker = search algorithm."
-            " Best of N runs, fit + predict. ESAC is skchange-only.</sup>"
+            "<br><sup>Legend column = package, line style + marker = search"
+            " algorithm. Best of N runs, fit + predict. ESAC is"
+            " skchange-only.</sup>"
         ),
-        height=420 * n_rows + 80,
+        height=420 * n_rows + 140,
         width=480 * n_cols,
-        legend=dict(
-            orientation="h",
+        legend3=dict(
+            title=dict(text="\u00a0"),
             yanchor="top",
-            y=-0.1,
-            xanchor="center",
-            x=0.5,
+            y=-0.09,
+            xanchor="right",
+            x=0.40,
+            itemwidth=30,
         ),
-        margin=dict(b=140),
+        legend=dict(
+            title=dict(
+                text="<b>skchange</b>",
+                font=dict(color=PACKAGE_COLORS["skchange"]),
+            ),
+            yanchor="top",
+            y=-0.09,
+            xanchor="left",
+            x=0.44,
+            itemwidth=30,
+        ),
+        legend2=dict(
+            title=dict(
+                text="<b>ruptures</b>",
+                font=dict(color=PACKAGE_COLORS["ruptures"]),
+            ),
+            yanchor="top",
+            y=-0.09,
+            xanchor="left",
+            x=0.54,
+            itemwidth=30,
+        ),
+        margin=dict(b=200),
         template="plotly_white",
     )
 

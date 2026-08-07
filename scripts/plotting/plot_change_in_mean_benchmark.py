@@ -89,6 +89,7 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
                 legend_name = f"{package} — {ALGORITHM_LABELS[algorithm]}"
                 show_legend = legend_name not in shown_legends
                 shown_legends.add(legend_name)
+                is_skchange = package == "skchange"
 
                 n_samples = line_df["n_samples"].to_list()
                 values = line_df["value"].to_list()
@@ -97,7 +98,8 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
                         x=n_samples,
                         y=values,
                         mode="lines+markers",
-                        name=legend_name,
+                        name="\u00a0",
+                        legend="legend" if is_skchange else "legend2",
                         legendgroup=legend_name,
                         showlegend=show_legend,
                         line=dict(color=color, dash=dash, width=2),
@@ -134,22 +136,61 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
         )
 
     fig.update_yaxes(title_text="runtime (s)", row=1, col=1)
+
+    # Label-only legend column: invisible traces carry the algorithm names.
+    for label in ALGORITHM_LABELS.values():
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                mode="lines",
+                name=label,
+                legend="legend3",
+                showlegend=True,
+                line=dict(color="rgba(0,0,0,0)"),
+                hoverinfo="skip",
+            )
+        )
+
     fig.update_layout(
         title=(
             "Change-in-mean benchmark (L2 cost): runtime vs. sample size"
-            "<br><sup>Color = package, line style + marker = search algorithm."
-            " Best of N runs, fit + predict.</sup>"
+            "<br><sup>Legend column = package, line style + marker = search"
+            " algorithm. Best of N runs, fit + predict.</sup>"
         ),
-        height=550,
+        height=620,
         width=max(420 * n_cols, 700),
-        legend=dict(
-            orientation="h",
+        legend3=dict(
+            title=dict(text="\u00a0"),
             yanchor="top",
-            y=-0.18,
-            xanchor="center",
-            x=0.5,
+            y=-0.2,
+            xanchor="right",
+            x=0.40,
+            itemwidth=30,
         ),
-        margin=dict(b=140),
+        legend=dict(
+            title=dict(
+                text="<b>skchange</b>",
+                font=dict(color=PACKAGE_COLORS["skchange"]),
+            ),
+            yanchor="top",
+            y=-0.2,
+            xanchor="left",
+            x=0.44,
+            itemwidth=30,
+        ),
+        legend2=dict(
+            title=dict(
+                text="<b>ruptures</b>",
+                font=dict(color=PACKAGE_COLORS["ruptures"]),
+            ),
+            yanchor="top",
+            y=-0.2,
+            xanchor="left",
+            x=0.56,
+            itemwidth=30,
+        ),
+        margin=dict(b=200),
         template="plotly_white",
     )
     return fig
