@@ -27,6 +27,7 @@ RESULTS_PATH = (
     PROJECT_DIR / "results" / "multivariate-change-detection-benchmark.parquet"
 )
 OUTPUT_PATH = PROJECT_DIR / "figures" / "mv-dimension-benchmark.html"
+OUTPUT_PATH_PDF = OUTPUT_PATH.with_suffix(".pdf")
 
 PACKAGE_COLORS: dict[str, str] = {
     "skchange": "#1f77b4",  # blue
@@ -125,7 +126,7 @@ def main() -> None:
                         mode="lines+markers",
                         name="\u00a0",
                         legend="legend" if is_skchange else "legend2",
-                        legendgroup=legend_name,
+                        legendgroup=search,
                         showlegend=show_legend,
                         line=dict(color=color, dash=dash, width=2),
                         marker=dict(
@@ -164,7 +165,7 @@ def main() -> None:
         fig.update_yaxes(title_text="runtime (s)", row=row_idx, col=1)
 
     # Label-only legend column: invisible traces carry the algorithm names.
-    for label in SEARCH_LABELS.values():
+    for search, label in SEARCH_LABELS.items():
         fig.add_trace(
             go.Scatter(
                 x=[None],
@@ -172,6 +173,7 @@ def main() -> None:
                 mode="lines",
                 name=label,
                 legend="legend3",
+                legendgroup=search,
                 showlegend=True,
                 line=dict(color="rgba(0,0,0,0)"),
                 hoverinfo="skip",
@@ -179,6 +181,17 @@ def main() -> None:
         )
 
     n_label = ", ".join(str(n) for n in sorted(n_samples))
+
+    # Legend columns live in the right margin; x positions are normalized
+    # to the plot-area width, so convert the pixel offsets accordingly.
+    margin_l = 80
+    margin_r = 460
+    axes_width = 480 * n_cols
+    width = axes_width + margin_l + margin_r
+    x_labels = 1 + 15 / axes_width
+    x_skchange = 1 + (15 + 170) / axes_width
+    x_ruptures = x_skchange + 130 / axes_width
+
     fig.update_layout(
         title=(
             f"Multivariate change detection benchmark (n = {n_label}):"
@@ -187,15 +200,17 @@ def main() -> None:
             " algorithm. Best of N runs, fit + predict. ESAC is"
             " skchange-only.</sup>"
         ),
-        height=420 * n_rows + 140,
-        width=480 * n_cols,
+        height=420 * n_rows,
+        width=width,
         legend3=dict(
             title=dict(text="\u00a0"),
             yanchor="top",
-            y=-0.09,
-            xanchor="right",
-            x=0.40,
+            y=1.0,
+            xanchor="left",
+            x=x_labels,
             itemwidth=30,
+            itemclick="toggleothers",
+            itemdoubleclick="toggle",
         ),
         legend=dict(
             title=dict(
@@ -203,9 +218,9 @@ def main() -> None:
                 font=dict(color=PACKAGE_COLORS["skchange"]),
             ),
             yanchor="top",
-            y=-0.09,
+            y=1.0,
             xanchor="left",
-            x=0.44,
+            x=x_skchange,
             itemwidth=30,
         ),
         legend2=dict(
@@ -214,18 +229,19 @@ def main() -> None:
                 font=dict(color=PACKAGE_COLORS["ruptures"]),
             ),
             yanchor="top",
-            y=-0.09,
+            y=1.0,
             xanchor="left",
-            x=0.54,
+            x=x_ruptures,
             itemwidth=30,
         ),
-        margin=dict(b=200),
+        margin=dict(l=margin_l, r=margin_r, b=80),
         template="plotly_white",
     )
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     fig.write_html(OUTPUT_PATH)
-    print(f"Figure written to {OUTPUT_PATH}")
+    fig.write_image(OUTPUT_PATH_PDF)
+    print(f"Figure written to {OUTPUT_PATH} and {OUTPUT_PATH_PDF}")
     fig.show()
 
 

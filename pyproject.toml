@@ -17,6 +17,7 @@ dependencies = [
     "ipykernel>=7.3.0",
     "nbformat>=5.10.4",
     "pyinstrument>=5.1.2",
+    "kaleido>=1.3.0",
 ]
 
 [tool.uv.sources]

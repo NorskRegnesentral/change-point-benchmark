@@ -31,6 +31,8 @@ RESULTS_PATH = PROJECT_DIR / "results" / "change-in-mean-benchmark.parquet"
 FIGURES_DIR = PROJECT_DIR / "figures"
 OUTPUT_PATH = FIGURES_DIR / "change-in-mean-benchmark.html"
 OUTPUT_PATH_P1 = FIGURES_DIR / "change-in-mean-benchmark-p1.html"
+OUTPUT_PATH_PDF = OUTPUT_PATH.with_suffix(".pdf")
+OUTPUT_PATH_P1_PDF = OUTPUT_PATH_P1.with_suffix(".pdf")
 
 DIMENSIONS: list[int] = [1, 2, 5]
 
@@ -100,7 +102,7 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
                         mode="lines+markers",
                         name="\u00a0",
                         legend="legend" if is_skchange else "legend2",
-                        legendgroup=legend_name,
+                        legendgroup=algorithm,
                         showlegend=show_legend,
                         line=dict(color=color, dash=dash, width=2),
                         marker=dict(
@@ -138,7 +140,7 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
     fig.update_yaxes(title_text="runtime (s)", row=1, col=1)
 
     # Label-only legend column: invisible traces carry the algorithm names.
-    for label in ALGORITHM_LABELS.values():
+    for algorithm, label in ALGORITHM_LABELS.items():
         fig.add_trace(
             go.Scatter(
                 x=[None],
@@ -146,11 +148,22 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
                 mode="lines",
                 name=label,
                 legend="legend3",
+                legendgroup=algorithm,
                 showlegend=True,
                 line=dict(color="rgba(0,0,0,0)"),
                 hoverinfo="skip",
             )
         )
+
+    # Legend columns live in the right margin; x positions are normalized
+    # to the plot-area width, so convert the pixel offsets accordingly.
+    margin_l = 80
+    margin_r = 460
+    axes_width = max(420 * n_cols, 560)
+    width = axes_width + margin_l + margin_r
+    x_labels = 1 + 15 / axes_width
+    x_skchange = 1 + (15 + 170) / axes_width
+    x_ruptures = x_skchange + 130 / axes_width
 
     fig.update_layout(
         title=(
@@ -158,15 +171,17 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
             "<br><sup>Legend column = package, line style + marker = search"
             " algorithm. Best of N runs, fit + predict.</sup>"
         ),
-        height=620,
-        width=max(420 * n_cols, 700),
+        height=520,
+        width=width,
         legend3=dict(
             title=dict(text="\u00a0"),
             yanchor="top",
-            y=-0.2,
-            xanchor="right",
-            x=0.40,
+            y=1.0,
+            xanchor="left",
+            x=x_labels,
             itemwidth=30,
+            itemclick="toggleothers",
+            itemdoubleclick="toggle",
         ),
         legend=dict(
             title=dict(
@@ -174,9 +189,9 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
                 font=dict(color=PACKAGE_COLORS["skchange"]),
             ),
             yanchor="top",
-            y=-0.2,
+            y=1.0,
             xanchor="left",
-            x=0.44,
+            x=x_skchange,
             itemwidth=30,
         ),
         legend2=dict(
@@ -185,12 +200,12 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
                 font=dict(color=PACKAGE_COLORS["ruptures"]),
             ),
             yanchor="top",
-            y=-0.2,
+            y=1.0,
             xanchor="left",
-            x=0.56,
+            x=x_ruptures,
             itemwidth=30,
         ),
-        margin=dict(b=200),
+        margin=dict(l=margin_l, r=margin_r, b=80),
         template="plotly_white",
     )
     return fig
@@ -205,13 +220,15 @@ def main() -> None:
 
     fig_all = build_figure(df, dimensions)
     fig_all.write_html(OUTPUT_PATH)
-    print(f"Figure written to {OUTPUT_PATH}")
+    fig_all.write_image(OUTPUT_PATH_PDF)
+    print(f"Figure written to {OUTPUT_PATH} and {OUTPUT_PATH_PDF}")
     fig_all.show()
 
     if 1 in available_dims:
         fig_p1 = build_figure(df, [1])
         fig_p1.write_html(OUTPUT_PATH_P1)
-        print(f"Figure written to {OUTPUT_PATH_P1}")
+        fig_p1.write_image(OUTPUT_PATH_P1_PDF)
+        print(f"Figure written to {OUTPUT_PATH_P1} and {OUTPUT_PATH_P1_PDF}")
         fig_p1.show()
 
 
