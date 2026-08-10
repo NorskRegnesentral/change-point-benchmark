@@ -80,7 +80,7 @@ RUNS_DEFAULT: int = 5
 # Override toggle: when False, skip cases already present in existing parquet.
 # ---------------------------------------------------------------------------
 OVERRIDE_RESULTS: bool = False
-COMMON_N_SAMPLES: list[int] = [100, 250, 500, 750, 1000, 2500, 5000, 10000]
+COMMON_N_SAMPLES: list[int] = [100, 250, 500, 750, 1000, 2500, 5000, int(1.0e4)]
 
 # ---------------------------------------------------------------------------
 # Jobs to run

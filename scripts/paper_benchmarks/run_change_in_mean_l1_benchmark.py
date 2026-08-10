@@ -1,16 +1,13 @@
 #!/usr/bin/env python
-"""Run the change-in-mean L2 benchmark.
+"""Run the change-in-mean L1 benchmark.
 
 Compares skchange and ruptures implementations of PELT, moving window, and
-binary segmentation on the same L2 change-in-mean problem. Run with::
+binary segmentation on the same L1 change-in-mean problem. Run with::
 
-    uv run python scripts/paper_benchmarks/run_change_in_mean_benchmark.py
+    uv run python scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py
 
-Results are written to a file named like
-``results/change-in-mean-benchmark_2026-08-10_skchange-0.9.0_ruptures-1.1.10.parquet``.
-The ``package`` and ``cpd_algorithm`` columns can be used for plot color and
-line type, respectively. Existing cases are skipped unless
-:data:`OVERRIDE_RESULTS` is enabled.
+Results are written to a versioned file in ``results``. Existing cases are
+skipped unless :data:`OVERRIDE_RESULTS` is enabled.
 """
 
 from __future__ import annotations
@@ -28,13 +25,10 @@ from change_bench.benchmarks.registry import Pair, collect_cases
 from change_bench.paths import prepare_results_path
 from change_bench.runner import run_benchmark
 
-# ============================================================================
-# Configuration
-# ============================================================================
 PAIRS: list[Pair] = [
-    Pair.PELT_L2,
-    Pair.MOVING_WINDOW_L2,
-    Pair.BINSEG_L2_CUSUM,
+    Pair.PELT_L1,
+    Pair.MOVING_WINDOW_L1,
+    Pair.BINSEG_L1,
 ]
 DIMENSIONS: list[int] = [1]
 N_SAMPLES: list[int] = [
@@ -45,30 +39,28 @@ N_SAMPLES: list[int] = [
     1500,
     2500,
     5000,
-    int(1.0e4),
-    int(2.5e4),
-    int(5.0e4),
-    int(1.0e5),
+    ### Take a really long time per sample. Skip.
+    # int(1.0e4),
+    # int(2.5e4),
+    # int(5.0e4),
+    # int(1.0e5),
 ]
 MIN_SEGMENT_LENGTH: int = 1
 INCLUDE_FIT: bool = True
 DISTRIBUTIONS: list[str] = ["normal"]
 
-# Each (threshold, n_runs) entry applies when n_samples <= threshold.
 RUNS_REGIME: list[tuple[int, int]] = [
-    # (250, 25),
-    # (500, 20),
-    # (1000, 15),
-    # (2500, 10),
+    # More than 1000 samples: 5 runs
+    (1000, 10),
 ]
-RUNS_DEFAULT: int = 10
+RUNS_DEFAULT: int = 5
 
 OVERRIDE_RESULTS: bool = False
 RUN_STARTED_ON = date.today()
 SKCHANGE_VERSION = version("skchange")
 RUPTURES_VERSION = version("ruptures")
 OUTPUT_PATH = prepare_results_path(
-    f"change-in-mean-benchmark_{RUN_STARTED_ON.isoformat()}_"
+    f"change-in-mean-l1-benchmark_{RUN_STARTED_ON.isoformat()}_"
     f"skchange-{SKCHANGE_VERSION}_ruptures-{RUPTURES_VERSION}.parquet",
     Path(__file__),
 )
@@ -84,9 +76,6 @@ _CASE_KEY_COLS = [
 ]
 
 
-# ============================================================================
-# Helpers
-# ============================================================================
 def _n_runs_for(n_samples: int) -> int:
     """Look up the number of timed repetitions for a sample size."""
     for threshold, n_runs in RUNS_REGIME:
@@ -117,7 +106,7 @@ def _load_existing_keys(path: Path) -> set[tuple]:
 
 
 def _collect_cases() -> list[BenchmarkCase]:
-    """Create all configured L2 change-in-mean benchmark cases."""
+    """Create all configured L1 change-in-mean benchmark cases."""
     return collect_cases(
         pairs=PAIRS,
         n_samples_list=N_SAMPLES,
@@ -191,21 +180,17 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
     else:
         output_frame = pl.DataFrame(results)
 
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     output_frame.write_parquet(OUTPUT_PATH)
     print(f"Finished in {elapsed:.1f}s ({len(results)} new result(s)).")
     print(f"Results written to {OUTPUT_PATH}")
 
 
-# ============================================================================
-# Main
-# ============================================================================
 def main() -> None:
     warnings.filterwarnings("ignore")
     cases = _collect_cases()
 
     print("=" * 60)
-    print("Change-in-Mean L2 Benchmark")
+    print("Change-in-Mean L1 Benchmark")
     print("=" * 60)
     print(f"Pairs:       {[pair.value for pair in PAIRS]}")
     print(f"Dimensions:  {DIMENSIONS}")

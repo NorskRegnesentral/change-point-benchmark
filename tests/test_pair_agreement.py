@@ -173,6 +173,36 @@ class TestPeltL2Agreement:
         _assert_changepoints_close(sk_cps, changepoints, tolerance=5)
 
 
+class TestPeltL1Agreement:
+    """PELT + L1 cost: skchange vs ruptures Pelt(model='l1')."""
+
+    @pytest.mark.parametrize("n_columns", [1, 3])
+    def test_same_changepoints(self, n_columns: int):
+        rng = np.random.default_rng(42)
+        changepoints = [100, 200]
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=changepoints,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
+        )
+
+        sk_detector = SkchangePELT(
+            cost=L1Cost(), penalty=TEST_PENALTY, min_segment_length=1
+        ).fit(data)
+        sk_changepoints = sorted(sk_detector.predict(data).tolist())
+
+        rpt_algorithm = rpt.Pelt(model="l1", min_size=1, jump=1).fit(data)
+        rpt_changepoints = sorted(
+            _strip_endpoint(
+                rpt_algorithm.predict(pen=TEST_PENALTY), len(data)
+            )
+        )
+
+        assert sk_changepoints == rpt_changepoints
+
+
 class TestPelt1dGaussianAgreement:
     """PELT + Gaussian cost: skchange vs ruptures Pelt(model='normal')."""
 
@@ -522,6 +552,48 @@ class TestBinSegAgreement:
             expected_cps,
             tolerance=TOLERANCE,
             msg=f"ruptures Binseg L2 Change Score (p={n_columns}): ",
+        )
+
+
+class TestBinSegL1Agreement:
+    """Seeded binary segmentation + L1 vs ruptures Binseg(model='l1')."""
+
+    @pytest.mark.parametrize("n_columns", [1, 3])
+    def test_both_find_known_changepoints(self, n_columns: int):
+        rng = np.random.default_rng(42)
+        expected_changepoints = [100, 200]
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=expected_changepoints,
+            means=[0.0, 5.0, 0.0],
+            n_columns=n_columns,
+        )
+
+        sk_detector = SeededBinarySegmentation(
+            change_score=CostChangeScore(L1Cost()),
+            penalty=SKCHANGE_BINSEG_PENALTY,
+        ).fit(data)
+        sk_changepoints = sorted(sk_detector.predict(data).tolist())
+
+        rpt_algorithm = rpt.Binseg(model="l1", min_size=1, jump=1).fit(data)
+        rpt_changepoints = sorted(
+            _strip_endpoint(
+                rpt_algorithm.predict(pen=RUPTURES_BINSEG_PENALTY), len(data)
+            )
+        )
+
+        _assert_changepoints_close(
+            sk_changepoints,
+            expected_changepoints,
+            tolerance=TOLERANCE,
+            msg=f"skchange SeededBinSeg L1 (p={n_columns}): ",
+        )
+        _assert_changepoints_close(
+            rpt_changepoints,
+            expected_changepoints,
+            tolerance=TOLERANCE,
+            msg=f"ruptures Binseg L1 (p={n_columns}): ",
         )
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# %%
 """Comparison figures for the change-in-mean (L2) benchmark.
 
 Produces two figures:
@@ -23,18 +23,28 @@ import plotly.graph_objects as go
 import polars as pl
 from plotly.subplots import make_subplots
 
+from change_bench.plotting import relative_speed_frame
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-RESULTS_PATH = PROJECT_DIR / "results" / "change-in-mean-benchmark.parquet"
+RESULTS_PATH = (
+    PROJECT_DIR
+    / "results"
+    / "change-in-mean-benchmark_2026-08-10_skchange-0.16.0_ruptures-1.1.10.parquet"
+)
+# RESULTS_PATH = PROJECT_DIR / "results" / "old-change-in-mean-benchmark.parquet"
 FIGURES_DIR = PROJECT_DIR / "figures"
 OUTPUT_PATH = FIGURES_DIR / "change-in-mean-benchmark.html"
 OUTPUT_PATH_P1 = FIGURES_DIR / "change-in-mean-benchmark-p1.html"
+RELATIVE_OUTPUT_PATH = FIGURES_DIR / "change-in-mean-benchmark-relative.html"
 OUTPUT_PATH_PDF = OUTPUT_PATH.with_suffix(".pdf")
 OUTPUT_PATH_P1_PDF = OUTPUT_PATH_P1.with_suffix(".pdf")
+RELATIVE_OUTPUT_PATH_PDF = RELATIVE_OUTPUT_PATH.with_suffix(".pdf")
 
-DIMENSIONS: list[int] = [1, 2, 5]
+DIMENSIONS: list[int] = [1]
+USE_SKI_JUMP_AVERAGE: bool = True
 
 PACKAGE_COLORS: dict[str, str] = {
     "skchange": "#1f77b4",  # blue
@@ -54,7 +64,14 @@ ALGORITHM_LABELS: dict[str, str] = {
     "binseg_l2_cusum": "Binary segmentation",
 }
 
-METRIC_COL = "min_s"
+ALGORITHM_COLORS: dict[str, str] = {
+    "pelt_l2": "#2ca02c",
+    "moving_window_l2": "#9467bd",
+    "binseg_l2_cusum": "#8c564b",
+}
+
+METRIC_COL = "ski_jump_mean_s" if USE_SKI_JUMP_AVERAGE else "min_s"
+METRIC_LABEL = "ski-jump average" if USE_SKI_JUMP_AVERAGE else "minimum"
 
 
 def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
@@ -133,6 +150,7 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
             minor=dict(ticks="inside", showgrid=True),
             exponentformat="power",
             showexponent="all",
+            showticklabels=True,
             row=1,
             col=col_idx,
         )
@@ -169,7 +187,8 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
         title=(
             "Change-in-mean benchmark (L2 cost): runtime vs. sample size"
             "<br><sup>Legend column = package, line style + marker = search"
-            " algorithm. Best of N runs, fit + predict.</sup>"
+            f" algorithm. {METRIC_LABEL.capitalize()} runtime across N runs,"
+            " fit+predict.</sup>"
         ),
         height=520,
         width=width,
@@ -211,6 +230,84 @@ def build_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
     return fig
 
 
+def build_relative_speed_figure(df: pl.DataFrame, dimensions: list[int]) -> go.Figure:
+    """Build a ruptures/skchange runtime-ratio figure."""
+    ratios = relative_speed_frame(
+        df, ["cpd_algorithm", "data_dimension", "n_samples"], METRIC_COL
+    )
+    fig = make_subplots(
+        rows=1,
+        cols=len(dimensions),
+        subplot_titles=[f"p = {dim}" for dim in dimensions],
+        shared_yaxes=True,
+        horizontal_spacing=0.06,
+    )
+
+    for col_idx, dim in enumerate(dimensions, start=1):
+        for algorithm, (dash, symbol) in ALGORITHM_STYLE.items():
+            line_df = ratios.filter(
+                (pl.col("data_dimension") == dim)
+                & (pl.col("cpd_algorithm") == algorithm)
+            )
+            if line_df.is_empty():
+                continue
+
+            n_samples = line_df["n_samples"].to_list()
+            speedups = line_df["relative_speed"].to_list()
+            skchange_times = line_df["skchange_s"].to_list()
+            ruptures_times = line_df["ruptures_s"].to_list()
+            fig.add_trace(
+                go.Scatter(
+                    x=n_samples,
+                    y=speedups,
+                    mode="lines+markers",
+                    name=ALGORITHM_LABELS[algorithm],
+                    legendgroup=algorithm,
+                    showlegend=col_idx == 1,
+                    line=dict(color=ALGORITHM_COLORS[algorithm], dash=dash, width=2),
+                    marker=dict(
+                        color=ALGORITHM_COLORS[algorithm], symbol=symbol, size=9
+                    ),
+                    text=[
+                        f"{ALGORITHM_LABELS[algorithm]}<br>n={n}"
+                        f"<br>ruptures / skchange = {ratio:.2f}x"
+                        f"<br>skchange: {sk_s:.2e} s"
+                        f"<br>ruptures: {rpt_s:.2e} s"
+                        for n, ratio, sk_s, rpt_s in zip(
+                            n_samples, speedups, skchange_times, ruptures_times
+                        )
+                    ],
+                    hoverinfo="text",
+                ),
+                row=1,
+                col=col_idx,
+            )
+        fig.update_xaxes(
+            title_text="n samples",
+            type="log",
+            exponentformat="power",
+            row=1,
+            col=col_idx,
+        )
+        fig.update_yaxes(type="log", showticklabels=True, row=1, col=col_idx)
+
+    fig.add_hline(y=1, line=dict(color="#666666", dash="dash", width=1))
+    fig.update_yaxes(title_text="relative runtime (ruptures / skchange)", row=1, col=1)
+    fig.update_layout(
+        title=(
+            "Change-in-mean benchmark (L2 cost): relative runtime"
+            "<br><sup>Values above 1 mean skchange is faster."
+            f" Ratio of {METRIC_LABEL} fit+predict times.</sup>"
+        ),
+        height=520,
+        width=max(420 * len(dimensions), 560) + 240,
+        legend=dict(title=dict(text="<b>Search algorithm</b>")),
+        margin=dict(l=90, r=220, b=80),
+        template="plotly_white",
+    )
+    return fig
+
+
 def main() -> None:
     df = pl.read_parquet(RESULTS_PATH).filter(pl.col("include_fit"))
     available_dims = df["data_dimension"].unique().to_list()
@@ -224,6 +321,12 @@ def main() -> None:
     print(f"Figure written to {OUTPUT_PATH} and {OUTPUT_PATH_PDF}")
     fig_all.show()
 
+    relative_fig = build_relative_speed_figure(df, dimensions)
+    relative_fig.write_html(RELATIVE_OUTPUT_PATH)
+    relative_fig.write_image(RELATIVE_OUTPUT_PATH_PDF)
+    print(f"Figure written to {RELATIVE_OUTPUT_PATH} and {RELATIVE_OUTPUT_PATH_PDF}")
+    relative_fig.show()
+
     if 1 in available_dims:
         fig_p1 = build_figure(df, [1])
         fig_p1.write_html(OUTPUT_PATH_P1)
@@ -234,3 +337,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# %%

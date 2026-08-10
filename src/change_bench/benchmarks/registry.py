@@ -18,6 +18,7 @@ from enum import StrEnum
 from change_bench.benchmarks.comparison_pairs import (
     BenchmarkCase,
     pair_binseg_esac,
+    pair_binseg_l1,
     pair_binseg_l2_cusum,
     pair_binseg_mv_gaussian,
     pair_binseg_rank,
@@ -27,6 +28,7 @@ from change_bench.benchmarks.comparison_pairs import (
     pair_moving_window_mv_gaussian,
     pair_moving_window_rank,
     pair_pelt_1d_gaussian,
+    pair_pelt_l1,
     pair_pelt_l2,
     pair_pelt_mv_gaussian,
     pair_pelt_poisson,
@@ -43,6 +45,7 @@ class Pair(StrEnum):
     """Available comparison pairs."""
 
     PELT_L2 = "pelt_l2"
+    PELT_L1 = "pelt_l1"
     PELT_1D_GAUSSIAN = "pelt_1d_gaussian"
     PELT_POISSON = "pelt_poisson"
     PELT_RANK = "pelt_rank"
@@ -51,6 +54,7 @@ class Pair(StrEnum):
     MOVING_WINDOW_ESAC = "moving_window_esac"
     MOVING_WINDOW_RANK = "moving_window_rank"
     BINSEG_L2_CUSUM = "binseg_l2_cusum"
+    BINSEG_L1 = "binseg_l1"
     BINSEG_ESAC = "binseg_esac"
     BINSEG_RANK = "binseg_rank"
     BINSEG_MV_GAUSSIAN = "binseg_mv_gaussian"
@@ -90,6 +94,7 @@ def _make_problems(
 # ---------------------------------------------------------------------------
 BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
     Pair.PELT_L2: pair_pelt_l2,
+    Pair.PELT_L1: pair_pelt_l1,
     Pair.PELT_1D_GAUSSIAN: pair_pelt_1d_gaussian,
     Pair.PELT_POISSON: pair_pelt_poisson,
     Pair.PELT_RANK: pair_pelt_rank,
@@ -98,6 +103,7 @@ BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
     Pair.MOVING_WINDOW_ESAC: pair_moving_window_esac,
     Pair.MOVING_WINDOW_RANK: pair_moving_window_rank,
     Pair.BINSEG_L2_CUSUM: pair_binseg_l2_cusum,
+    Pair.BINSEG_L1: pair_binseg_l1,
     Pair.BINSEG_ESAC: pair_binseg_esac,
     Pair.BINSEG_RANK: pair_binseg_rank,
     Pair.BINSEG_MV_GAUSSIAN: pair_binseg_mv_gaussian,
@@ -122,10 +128,12 @@ MULTIVARIATE_ONLY_PAIRS: set[Pair] = {
 PAIR_CATEGORIES: dict[str, list[Pair]] = {
     "mean_change": [
         Pair.PELT_L2,
+        Pair.PELT_L1,
         Pair.PELT_POISSON,
         Pair.MOVING_WINDOW_L2,
         Pair.MOVING_WINDOW_L1,
         Pair.BINSEG_L2_CUSUM,
+        Pair.BINSEG_L1,
     ],
     "needs_min_segment_length": [
         Pair.PELT_1D_GAUSSIAN,

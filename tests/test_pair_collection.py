@@ -18,6 +18,21 @@ def test_existing_pair_collects_both_packages():
     assert {case.package for case in cases} == {"skchange", "ruptures"}
 
 
+@pytest.mark.parametrize(
+    "pair",
+    [Pair.PELT_L1, Pair.MOVING_WINDOW_L1, Pair.BINSEG_L1],
+)
+def test_l1_pair_collects_both_packages(pair: Pair):
+    cases = collect_cases(
+        pairs=[pair],
+        n_samples_list=[100],
+        dimensions=[1],
+    )
+
+    assert {case.package for case in cases} == {"skchange", "ruptures"}
+    assert {case.cpd_algorithm for case in cases} == {pair.value}
+
+
 def test_pelt_rank_enforces_cost_minimum_segment_length():
     cases = collect_cases(
         pairs=[Pair.PELT_RANK],

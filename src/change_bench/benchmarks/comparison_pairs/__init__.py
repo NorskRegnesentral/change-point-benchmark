@@ -12,6 +12,7 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.benchmarks.comparison_pairs.binseg import pair_binseg_l2_cusum
 from change_bench.benchmarks.comparison_pairs.binseg_esac import pair_binseg_esac
+from change_bench.benchmarks.comparison_pairs.binseg_l1 import pair_binseg_l1
 from change_bench.benchmarks.comparison_pairs.binseg_mv_gaussian import (
     pair_binseg_mv_gaussian,
 )
@@ -34,6 +35,7 @@ from change_bench.benchmarks.comparison_pairs.moving_window_rank import (
 from change_bench.benchmarks.comparison_pairs.pelt_gaussian import (
     pair_pelt_1d_gaussian,
 )
+from change_bench.benchmarks.comparison_pairs.pelt_l1 import pair_pelt_l1
 from change_bench.benchmarks.comparison_pairs.pelt_l2 import pair_pelt_l2
 from change_bench.benchmarks.comparison_pairs.pelt_linear_trend import (
     pair_pelt_linear_trend,
@@ -53,6 +55,7 @@ __all__ = [
     "PairConfig",
     "build_pair_cases",
     "pair_binseg_esac",
+    "pair_binseg_l1",
     "pair_binseg_l2_cusum",
     "pair_binseg_mv_gaussian",
     "pair_binseg_rank",
@@ -62,6 +65,7 @@ __all__ = [
     "pair_moving_window_mv_gaussian",
     "pair_moving_window_rank",
     "pair_pelt_1d_gaussian",
+    "pair_pelt_l1",
     "pair_pelt_l2",
     "pair_pelt_linear_trend",
     "pair_pelt_mv_gaussian",
