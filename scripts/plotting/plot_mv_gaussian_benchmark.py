@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# %%
 """Comparison figure for the MV Gaussian change-point benchmark.
 
 One subplot per data dimension, showing runtime vs. n_samples for both
@@ -26,6 +27,7 @@ from plotly.subplots import make_subplots
 # Configuration
 # ---------------------------------------------------------------------------
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
+# RESULTS_PATH = PROJECT_DIR / "results" / "mv_gaussian_benchmark_v2_5.parquet"
 RESULTS_PATH = PROJECT_DIR / "results" / "mv_gaussian_benchmark.parquet"
 FIGURES_DIR = PROJECT_DIR / "figures"
 OUTPUT_PATH = FIGURES_DIR / "mv-gaussian-benchmark.html"
@@ -270,3 +272,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# %%

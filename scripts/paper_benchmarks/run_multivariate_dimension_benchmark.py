@@ -7,15 +7,17 @@ ESAC cases are skchange-only. Run with::
 
     uv run python scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py
 
-Results are written to
-``results/multivariate-change-detection-benchmark.parquet``. Existing cases
-are skipped unless :data:`OVERRIDE_RESULTS` is enabled.
+Results are written to a file named like
+``results/multivariate-change-detection-benchmark_2026-08-10_skchange-0.9.0_ruptures-1.1.10.parquet``.
+Existing cases are skipped unless :data:`OVERRIDE_RESULTS` is enabled.
 """
 
 from __future__ import annotations
 
 import time
 import warnings
+from datetime import date
+from importlib.metadata import version
 from pathlib import Path
 
 import polars as pl
@@ -42,15 +44,20 @@ PAIRS: list[Pair] = [
     Pair.PELT_MV_GAUSSIAN,
 ]
 N_SAMPLES: int = 2000
-DIMENSIONS: list[int] = [5, 10, 25, 50, 100, 200]
+DIMENSIONS: list[int] = [5, 10, 25, 50, 75, 100]
 MIN_SEGMENT_LENGTH: int = 1
 INCLUDE_FIT: bool = True
 DISTRIBUTIONS: list[str] = ["normal"]
 N_RUNS: int = 10
 
 OVERRIDE_RESULTS: bool = False
+RUN_STARTED_ON = date.today()
+SKCHANGE_VERSION = version("skchange")
+RUPTURES_VERSION = version("ruptures")
 OUTPUT_PATH = prepare_results_path(
-    "multivariate-change-detection-benchmark.parquet", Path(__file__)
+    f"multivariate-change-detection-benchmark_{RUN_STARTED_ON.isoformat()}_"
+    f"skchange-{SKCHANGE_VERSION}_ruptures-{RUPTURES_VERSION}.parquet",
+    Path(__file__),
 )
 
 _CASE_KEY_COLS = [

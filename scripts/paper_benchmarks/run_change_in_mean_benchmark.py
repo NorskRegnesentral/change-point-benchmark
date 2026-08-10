@@ -6,9 +6,10 @@ binary segmentation on the same L2 change-in-mean problem. Run with::
 
     uv run python scripts/paper_benchmarks/run_change_in_mean_benchmark.py
 
-Results are written to ``results/change-in-mean-benchmark.parquet``. The
-``package`` and ``cpd_algorithm`` columns can be used for plot color and line
-type, respectively. Existing cases are skipped unless
+Results are written to a file named like
+``results/change-in-mean-benchmark_2026-08-10_skchange-0.9.0_ruptures-1.1.10.parquet``.
+The ``package`` and ``cpd_algorithm`` columns can be used for plot color and
+line type, respectively. Existing cases are skipped unless
 :data:`OVERRIDE_RESULTS` is enabled.
 """
 
@@ -16,6 +17,8 @@ from __future__ import annotations
 
 import time
 import warnings
+from datetime import date
+from importlib.metadata import version
 from pathlib import Path
 
 import polars as pl
@@ -62,7 +65,14 @@ RUNS_REGIME: list[tuple[int, int]] = [
 RUNS_DEFAULT: int = 10
 
 OVERRIDE_RESULTS: bool = False
-OUTPUT_PATH = prepare_results_path("change-in-mean-benchmark.parquet", Path(__file__))
+RUN_STARTED_ON = date.today()
+SKCHANGE_VERSION = version("skchange")
+RUPTURES_VERSION = version("ruptures")
+OUTPUT_PATH = prepare_results_path(
+    f"change-in-mean-benchmark_{RUN_STARTED_ON.isoformat()}_"
+    f"skchange-{SKCHANGE_VERSION}_ruptures-{RUPTURES_VERSION}.parquet",
+    Path(__file__),
+)
 
 _CASE_KEY_COLS = [
     "name",

@@ -30,8 +30,8 @@ PAIRS: list[Pair] = [
     Pair.MOVING_WINDOW_MV_GAUSSIAN,
     Pair.BINSEG_MV_GAUSSIAN,
 ]
-DIMENSIONS: list[int] = [2, 5, 10]
-N_SAMPLES: list[int] = [100, 250, 500, 750, 1000, 2500]
+DIMENSIONS: list[int] = [2, 5, 10, 25]
+N_SAMPLES: list[int] = [100, 250, 500, 750, 1000]
 MIN_SEGMENT_LENGTH: int = 1
 INCLUDE_FIT: bool = True
 DISTRIBUTIONS: list[str] | None = None
