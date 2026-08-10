@@ -1,3 +1,6 @@
+# Ignore PDF files:
+*.pdf
+
 # Ignore vscode settings:
 .vscode/
 

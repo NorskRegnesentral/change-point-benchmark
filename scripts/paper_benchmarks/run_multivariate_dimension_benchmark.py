@@ -5,7 +5,7 @@ Compares valid combinations of PELT, moving window, and seeded binary
 segmentation with L2, ESAC, multivariate Gaussian, and rank scores/costs.
 ESAC cases are skchange-only. Run with::
 
-    uv run python scripts/run_multivariate_dimension_benchmark.py
+    uv run python scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py
 
 Results are written to
 ``results/multivariate-change-detection-benchmark.parquet``. Existing cases
@@ -22,6 +22,7 @@ import polars as pl
 
 from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
 from change_bench.benchmarks.registry import Pair, collect_cases
+from change_bench.paths import prepare_results_path
 from change_bench.runner import run_benchmark
 
 # ============================================================================
@@ -48,8 +49,9 @@ DISTRIBUTIONS: list[str] = ["normal"]
 N_RUNS: int = 10
 
 OVERRIDE_RESULTS: bool = False
-RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-OUTPUT_PATH = RESULTS_DIR / "multivariate-change-detection-benchmark.parquet"
+OUTPUT_PATH = prepare_results_path(
+    "multivariate-change-detection-benchmark.parquet", Path(__file__)
+)
 
 _CASE_KEY_COLS = [
     "name",

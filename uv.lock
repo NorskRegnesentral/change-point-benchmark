@@ -1291,6 +1291,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=1.1" },
     { name = "plotly", marker = "extra == 'dev'" },
     { name = "plotly", marker = "extra == 'docs'" },
+    { name = "plotly", marker = "extra == 'test'" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pydata-sphinx-theme", marker = "extra == 'docs'" },
     { name = "pypandoc", marker = "extra == 'docs'" },
@@ -1299,7 +1300,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "ruptures", marker = "extra == 'dev'" },
-    { name = "ruptures", marker = "extra == 'test'" },
+    { name = "ruptures", marker = "extra == 'test'", specifier = ">=1.1.11rc1" },
     { name = "scipy", marker = "extra == 'dev'", specifier = ">=1.14.1,<2.0.0" },
     { name = "sktime", specifier = ">=0.35" },
     { name = "sphinx", marker = "extra == 'docs'" },
@@ -1308,6 +1309,7 @@ requires-dist = [
     { name = "sphinx-gallery", marker = "extra == 'docs'" },
     { name = "sphinx-issues", marker = "extra == 'docs'" },
     { name = "tabulate", marker = "extra == 'docs'" },
+    { name = "typing-extensions", marker = "extra == 'test'" },
 ]
 provides-extras = ["numba", "all-extras", "test", "dev", "docs"]
 

@@ -6,7 +6,7 @@ segmentation over a broad range of sample sizes and dimensions. Run with::
 
     uv run python scripts/run_mv_gaussian_benchmark.py
 
-Results are written to ``results/mv_gaussian_benchmark.parquet``. Existing
+Results are written to ``results/mv_gaussian_benchmark_v2.parquet``. Existing
 cases are skipped unless :data:`OVERRIDE_RESULTS` is enabled.
 """
 
@@ -30,8 +30,8 @@ PAIRS: list[Pair] = [
     Pair.MOVING_WINDOW_MV_GAUSSIAN,
     Pair.BINSEG_MV_GAUSSIAN,
 ]
-DIMENSIONS: list[int] = [2, 5, 10, 25]
-N_SAMPLES: list[int] = [100, 250, 500, 750, 1000, 2500, 5000, 10000]
+DIMENSIONS: list[int] = [2, 5, 10]
+N_SAMPLES: list[int] = [100, 250, 500, 750, 1000, 2500]
 MIN_SEGMENT_LENGTH: int = 1
 INCLUDE_FIT: bool = True
 DISTRIBUTIONS: list[str] | None = None
@@ -47,7 +47,7 @@ RUNS_DEFAULT: int = 5
 
 OVERRIDE_RESULTS: bool = False
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-OUTPUT_PATH = RESULTS_DIR / "mv_gaussian_benchmark.parquet"
+OUTPUT_PATH = RESULTS_DIR / "mv_gaussian_benchmark_v2_5.parquet"
 
 #: Columns that uniquely identify a benchmark case in the parquet output.
 _CASE_KEY_COLS = [

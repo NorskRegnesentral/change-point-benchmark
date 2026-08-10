@@ -27,7 +27,9 @@ _CONFIG = PairConfig(
     sk_name_prefix="skchange_pelt_mv_gaussian",
     rpt_name_prefix="ruptures_pelt_normal",
     make_sk_detector=lambda msl: SkchangePELT(
-        cost=MultivariateGaussianCost(), penalty=PELT_PENALTY, min_segment_length=msl
+        cost=MultivariateGaussianCost(store_cov=True),
+        penalty=PELT_PENALTY,
+        min_segment_length=msl,
     ),
     make_rpt_algo=lambda msl: rpt.Pelt(model="normal", min_size=msl, jump=1),
     effective_msl=lambda msl, n_cols: max(msl, n_cols + 1),
@@ -42,5 +44,8 @@ def pair_pelt_mv_gaussian(
 ) -> list[BenchmarkCase]:
     """PELT with MultivariateGaussianCost/normal — skchange vs ruptures."""
     return build_pair_cases(
-        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+        problems,
+        _CONFIG,
+        include_fit=include_fit,
+        min_segment_length=min_segment_length,
     )

@@ -28,7 +28,9 @@ JOINT_MW_MV_GAUSSIAN_PENALTY = 4.0
 
 def _make_sk_detector(msl: int):
     return MovingWindow(
-        change_score=MultivariateGaussianScore(apply_bartlett_correction=False),
+        change_score=MultivariateGaussianScore(
+            apply_bartlett_correction=False, store_cov=True
+        ),
         penalty=JOINT_MW_MV_GAUSSIAN_PENALTY,
         bandwidth=max(MW_BANDWIDTH, msl),
     )

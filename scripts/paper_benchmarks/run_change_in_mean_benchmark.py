@@ -4,7 +4,7 @@
 Compares skchange and ruptures implementations of PELT, moving window, and
 binary segmentation on the same L2 change-in-mean problem. Run with::
 
-    uv run python scripts/run_change_in_mean_benchmark.py
+    uv run python scripts/paper_benchmarks/run_change_in_mean_benchmark.py
 
 Results are written to ``results/change-in-mean-benchmark.parquet``. The
 ``package`` and ``cpd_algorithm`` columns can be used for plot color and line
@@ -22,6 +22,7 @@ import polars as pl
 
 from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
 from change_bench.benchmarks.registry import Pair, collect_cases
+from change_bench.paths import prepare_results_path
 from change_bench.runner import run_benchmark
 
 # ============================================================================
@@ -61,8 +62,7 @@ RUNS_REGIME: list[tuple[int, int]] = [
 RUNS_DEFAULT: int = 10
 
 OVERRIDE_RESULTS: bool = False
-RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-OUTPUT_PATH = RESULTS_DIR / "change-in-mean-benchmark.parquet"
+OUTPUT_PATH = prepare_results_path("change-in-mean-benchmark.parquet", Path(__file__))
 
 _CASE_KEY_COLS = [
     "name",
