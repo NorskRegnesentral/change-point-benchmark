@@ -80,7 +80,7 @@ RUNS_DEFAULT: int = 5
 # Override toggle: when False, skip cases already present in existing parquet.
 # ---------------------------------------------------------------------------
 OVERRIDE_RESULTS: bool = False
-COMMON_N_SAMPLES: list[int] = [100, 250, 500, 750, 1000, 2500, 5000, int(1.0e4)]
+COMMON_N_SAMPLES: list[int] = [100, 250, 500, 750, 1000]
 
 # ---------------------------------------------------------------------------
 # Jobs to run
@@ -95,26 +95,28 @@ JOBS: list[Job] = [
         ],
         dimensions=[1, 2, 5],
         min_segment_length=1,
-        output_name="mean_change",
+        output_name="various_mean_change",
         n_samples=COMMON_N_SAMPLES,
     ),
     Job(
-        pairs=[Pair.PELT_1D_GAUSSIAN, Pair.PELT_RANK],
-        dimensions=[1, 2, 5],
-        min_segment_length=6,  # must be > max(dimensions) for rank costs
-        output_name="needs_min_segment_length",
+        pairs=[Pair.PELT_1D_GAUSSIAN],
+        dimensions=[1],
+        min_segment_length=2,  # Fitting variance, so need at least 2 samples per segment
+        output_name="1d_gaussian",
         n_samples=COMMON_N_SAMPLES,
     ),
     Job(
         pairs=[
             Pair.MOVING_WINDOW_RANK,
+            Pair.PELT_RANK,
+            Pair.BINSEG_RANK,
             Pair.BINSEG_MV_GAUSSIAN,
             Pair.PELT_MV_GAUSSIAN,
             Pair.MOVING_WINDOW_MV_GAUSSIAN,
         ],
         dimensions=[2, 5],
         min_segment_length=6,  # must be > max(dimensions) for rank costs
-        output_name="multivariate",
+        output_name="multivariate_rank_and_mv_gaussian",
         n_samples=COMMON_N_SAMPLES,
     ),
 ]
