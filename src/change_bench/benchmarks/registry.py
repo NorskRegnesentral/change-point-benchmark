@@ -20,16 +20,19 @@ from change_bench.benchmarks.comparison_pairs import (
     pair_binseg_esac,
     pair_binseg_l1,
     pair_binseg_l2_cusum,
+    pair_binseg_linreg,
     pair_binseg_mv_gaussian,
     pair_binseg_rank,
     pair_moving_window_esac,
     pair_moving_window_l1,
     pair_moving_window_l2,
+    pair_moving_window_linreg,
     pair_moving_window_mv_gaussian,
     pair_moving_window_rank,
     pair_pelt_1d_gaussian,
     pair_pelt_l1,
     pair_pelt_l2,
+    pair_pelt_linreg,
     pair_pelt_mv_gaussian,
     pair_pelt_poisson,
     pair_pelt_rank,
@@ -49,14 +52,17 @@ class Pair(StrEnum):
     PELT_1D_GAUSSIAN = "pelt_1d_gaussian"
     PELT_POISSON = "pelt_poisson"
     PELT_RANK = "pelt_rank"
+    PELT_LINREG = "pelt_linreg"
     MOVING_WINDOW_L2 = "moving_window_l2"
     MOVING_WINDOW_L1 = "moving_window_l1"
     MOVING_WINDOW_ESAC = "moving_window_esac"
     MOVING_WINDOW_RANK = "moving_window_rank"
+    MOVING_WINDOW_LINREG = "moving_window_linreg"
     BINSEG_L2_CUSUM = "binseg_l2_cusum"
     BINSEG_L1 = "binseg_l1"
     BINSEG_ESAC = "binseg_esac"
     BINSEG_RANK = "binseg_rank"
+    BINSEG_LINREG = "binseg_linreg"
     BINSEG_MV_GAUSSIAN = "binseg_mv_gaussian"
     PELT_MV_GAUSSIAN = "pelt_mv_gaussian"
     MOVING_WINDOW_MV_GAUSSIAN = "moving_window_mv_gaussian"
@@ -98,14 +104,17 @@ BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
     Pair.PELT_1D_GAUSSIAN: pair_pelt_1d_gaussian,
     Pair.PELT_POISSON: pair_pelt_poisson,
     Pair.PELT_RANK: pair_pelt_rank,
+    Pair.PELT_LINREG: pair_pelt_linreg,
     Pair.MOVING_WINDOW_L2: pair_moving_window_l2,
     Pair.MOVING_WINDOW_L1: pair_moving_window_l1,
     Pair.MOVING_WINDOW_ESAC: pair_moving_window_esac,
     Pair.MOVING_WINDOW_RANK: pair_moving_window_rank,
+    Pair.MOVING_WINDOW_LINREG: pair_moving_window_linreg,
     Pair.BINSEG_L2_CUSUM: pair_binseg_l2_cusum,
     Pair.BINSEG_L1: pair_binseg_l1,
     Pair.BINSEG_ESAC: pair_binseg_esac,
     Pair.BINSEG_RANK: pair_binseg_rank,
+    Pair.BINSEG_LINREG: pair_binseg_linreg,
     Pair.BINSEG_MV_GAUSSIAN: pair_binseg_mv_gaussian,
     Pair.PELT_MV_GAUSSIAN: pair_pelt_mv_gaussian,
     Pair.MOVING_WINDOW_MV_GAUSSIAN: pair_moving_window_mv_gaussian,
@@ -123,6 +132,9 @@ MULTIVARIATE_ONLY_PAIRS: set[Pair] = {
     Pair.BINSEG_ESAC,
     Pair.BINSEG_RANK,
     Pair.PELT_RANK,
+    Pair.PELT_LINREG,
+    Pair.MOVING_WINDOW_LINREG,
+    Pair.BINSEG_LINREG,
 }
 
 PAIR_CATEGORIES: dict[str, list[Pair]] = {
@@ -139,6 +151,9 @@ PAIR_CATEGORIES: dict[str, list[Pair]] = {
         Pair.PELT_1D_GAUSSIAN,
         # Pair.PELT_LINEAR_TREND,
         Pair.PELT_RANK,
+        Pair.PELT_LINREG,
+        Pair.MOVING_WINDOW_LINREG,
+        Pair.BINSEG_LINREG,
     ],
     "multivariate": [
         Pair.MOVING_WINDOW_RANK,
@@ -147,6 +162,11 @@ PAIR_CATEGORIES: dict[str, list[Pair]] = {
         Pair.PELT_MV_GAUSSIAN,
         Pair.MOVING_WINDOW_MV_GAUSSIAN,
         Pair.BINSEG_MV_GAUSSIAN,
+    ],
+    "linear_regression": [
+        Pair.PELT_LINREG,
+        Pair.MOVING_WINDOW_LINREG,
+        Pair.BINSEG_LINREG,
     ],
     "multivariate_dimension": [
         Pair.PELT_L2,

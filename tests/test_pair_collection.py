@@ -46,6 +46,25 @@ def test_pelt_rank_enforces_cost_minimum_segment_length():
 
 @pytest.mark.parametrize(
     "pair",
+    [Pair.PELT_LINREG, Pair.MOVING_WINDOW_LINREG, Pair.BINSEG_LINREG],
+)
+def test_linreg_pairs_require_response_and_predictor_columns(pair: Pair):
+    cases = collect_cases(
+        pairs=[pair],
+        n_samples_list=[100],
+        dimensions=[1, 2],
+        min_segment_length=1,
+    )
+
+    assert len(cases) == 2
+    assert {case.package for case in cases} == {"skchange", "ruptures"}
+    assert {case.cpd_algorithm for case in cases} == {pair.value}
+    assert {case.data_dimension for case in cases} == {2}
+    assert {case.min_segment_length for case in cases} == {2}
+
+
+@pytest.mark.parametrize(
+    "pair",
     [Pair.MOVING_WINDOW_ESAC, Pair.BINSEG_ESAC],
 )
 def test_esac_pair_collects_only_skchange(pair: Pair):

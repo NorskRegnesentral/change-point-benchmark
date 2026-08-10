@@ -3,7 +3,7 @@
 
 Configure benchmark jobs as plain Python data structures below, then run::
 
-    uv run python scripts/run_full_benchmark.py
+    uv run python scripts/run_varied_benchmark.py
 
 Each :class:`Job` specifies which comparison pairs to run, with which
 dimensions, minimum segment length, and fit modes.  The :data:`RUNS_REGIME`
@@ -42,7 +42,7 @@ class Job:
     dimensions:
         Data dimensionalities to benchmark.
     output_name:
-        Stem for the output parquet file (written to ``results/<name>.parquet``).
+        Stem for the output parquet file (written to ``results/varied/<name>.parquet``).
     min_segment_length:
         Minimum segment length (``min_size`` in ruptures).
     include_fit:
@@ -101,8 +101,20 @@ JOBS: list[Job] = [
     Job(
         pairs=[Pair.PELT_1D_GAUSSIAN],
         dimensions=[1],
-        min_segment_length=2,  # Fitting variance, so need at least 2 samples per segment
+        # Fitting variance requires at least 2 samples per segment.
+        min_segment_length=2,
         output_name="1d_gaussian",
+        n_samples=COMMON_N_SAMPLES,
+    ),
+    Job(
+        pairs=[
+            Pair.PELT_LINREG,
+            Pair.MOVING_WINDOW_LINREG,
+            Pair.BINSEG_LINREG,
+        ],
+        dimensions=[2],
+        min_segment_length=2,
+        output_name="linear_regression",
         n_samples=COMMON_N_SAMPLES,
     ),
     Job(
@@ -125,7 +137,7 @@ JOBS: list[Job] = [
 # ============================================================================
 # Helpers
 # ============================================================================
-RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
+RESULTS_DIR = Path(__file__).resolve().parent.parent / "results" / "varied"
 
 #: Columns that uniquely identify a benchmark case in the parquet output.
 _CASE_KEY_COLS = [

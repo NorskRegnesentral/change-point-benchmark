@@ -48,8 +48,8 @@ METRIC: str = "min"  # "ski-jump-mean" or "min"
 # ---------------------------------------------------------------------------
 # Configuration — change this path when running interactively
 # ---------------------------------------------------------------------------
-project_dir = Path(__file__).parent.parent
-results_dir: Path = project_dir / "results"
+project_dir = Path(__file__).parent.parent.parent
+results_dir: Path = project_dir / "results" / "varied"
 # results_dir: Path = project_dir / "old_results"
 
 if not results_dir.exists():

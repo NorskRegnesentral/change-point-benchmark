@@ -15,6 +15,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 import ruptures as rpt
+from ruptures.costs import CostLinear
 from skchange.new_api.detectors import (
     PELT as SkchangePELT,
 )
@@ -28,6 +29,7 @@ from skchange.new_api.interval_scorers import (
     GaussianCost,
     L1Cost,
     L2Cost,
+    LinearRegressionCost,
     MultivariateGaussianCost,
     PoissonCost,
     RankCost,
@@ -90,6 +92,13 @@ def _make_normal_change_data(
         n_columns=n_columns,
     )
     return cfg.generate(rng)
+
+
+def _make_linear_regression_change_data(rng: np.random.Generator) -> np.ndarray:
+    predictor = rng.normal(size=300)
+    slopes = np.repeat([1.0, 4.0, -2.0], 100)
+    response = slopes * predictor + rng.normal(scale=0.2, size=300)
+    return np.column_stack([response, predictor])
 
 
 def _assert_changepoints_close(
@@ -368,6 +377,29 @@ class TestPeltRankAgreement:
         _assert_changepoints_close(sk_cps, changepoints, tolerance=5)
 
 
+class TestPeltLinRegAgreement:
+    """PELT linear regression costs use column 0 as the response."""
+
+    def test_same_changepoints(self):
+        data = _make_linear_regression_change_data(np.random.default_rng(42))
+
+        sk_detector = SkchangePELT(
+            cost=LinearRegressionCost(response_col=0),
+            penalty=TEST_PENALTY,
+            min_segment_length=2,
+        ).fit(data)
+        sk_changepoints = sorted(sk_detector.predict(data).tolist())
+
+        rpt_algorithm = rpt.Pelt(
+            custom_cost=CostLinear(), min_size=2, jump=1
+        ).fit(data)
+        rpt_changepoints = sorted(
+            _strip_endpoint(rpt_algorithm.predict(pen=TEST_PENALTY), len(data))
+        )
+
+        assert sk_changepoints == rpt_changepoints == [100, 200]
+
+
 class TestMovingWindowL2Agreement:
     """MovingWindow + L2 Change Score: skchange vs ruptures Window(model='l2')."""
 
@@ -506,6 +538,32 @@ class TestMovingWindowRankAgreement:
         )
 
 
+class TestMovingWindowLinRegAgreement:
+    """Moving-window linear regression scores agree on slope changes."""
+
+    def test_both_find_known_changepoints(self):
+        data = _make_linear_regression_change_data(np.random.default_rng(42))
+
+        sk_detector = MovingWindow(
+            change_score=CostChangeScore(LinearRegressionCost(response_col=0)),
+            penalty=TEST_PENALTY,
+            bandwidth=MW_BANDWIDTH,
+        ).fit(data)
+        sk_changepoints = sorted(sk_detector.predict(data).tolist())
+
+        rpt_algorithm = rpt.Window(
+            custom_cost=CostLinear(),
+            width=2 * MW_BANDWIDTH,
+            min_size=2,
+            jump=1,
+        ).fit(data)
+        rpt_changepoints = sorted(
+            _strip_endpoint(rpt_algorithm.predict(pen=TEST_PENALTY), len(data))
+        )
+
+        assert sk_changepoints == rpt_changepoints == [100, 199]
+
+
 # ---------------------------------------------------------------------------
 # BinSeg pair agreement test — tolerance-based
 # ---------------------------------------------------------------------------
@@ -595,6 +653,30 @@ class TestBinSegL1Agreement:
             tolerance=TOLERANCE,
             msg=f"ruptures Binseg L1 (p={n_columns}): ",
         )
+
+
+class TestBinSegLinRegAgreement:
+    """Binary-segmentation linear regression scores agree on slope changes."""
+
+    def test_both_find_known_changepoints(self):
+        data = _make_linear_regression_change_data(np.random.default_rng(42))
+
+        sk_detector = SeededBinarySegmentation(
+            change_score=CostChangeScore(LinearRegressionCost(response_col=0)),
+            penalty=TEST_PENALTY,
+            min_subinterval_length=2,
+            max_interval_length=200,
+        ).fit(data)
+        sk_changepoints = sorted(sk_detector.predict(data).tolist())
+
+        rpt_algorithm = rpt.Binseg(
+            custom_cost=CostLinear(), min_size=2, jump=1
+        ).fit(data)
+        rpt_changepoints = sorted(
+            _strip_endpoint(rpt_algorithm.predict(pen=TEST_PENALTY), len(data))
+        )
+
+        assert sk_changepoints == rpt_changepoints == [100, 200]
 
 
 class TestEsacDetection:
