@@ -23,10 +23,14 @@ def find_repo_root(start: Path | None = None) -> Path:
     )
 
 
-def prepare_results_path(filename: str, start: Path | None = None) -> Path:
+def prepare_results_path(
+    filename: str, start: Path | None = None, subdir: Path | None = None
+) -> Path:
     """Return a repository-relative result path after validating its directory."""
     repo_root = find_repo_root(start)
     results_dir = repo_root / "results"
+    if subdir is not None:
+        results_dir = results_dir / subdir
     results_dir.mkdir(parents=True, exist_ok=True)
     if not results_dir.is_dir():
         raise NotADirectoryError(f"Results path is not a directory: {results_dir}")

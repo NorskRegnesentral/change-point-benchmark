@@ -71,6 +71,7 @@ OUTPUT_PATH = prepare_results_path(
     f"change-in-mean-benchmark_{RUN_STARTED_ON.isoformat()}_"
     f"skchange-{SKCHANGE_VERSION}_ruptures-{RUPTURES_VERSION}.parquet",
     Path(__file__),
+    subdir=Path("paper"),
 )
 
 _CASE_KEY_COLS = [

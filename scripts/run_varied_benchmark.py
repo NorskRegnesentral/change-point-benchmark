@@ -80,36 +80,47 @@ RUNS_DEFAULT: int = 5
 # Override toggle: when False, skip cases already present in existing parquet.
 # ---------------------------------------------------------------------------
 OVERRIDE_RESULTS: bool = False
-COMMON_N_SAMPLES: list[int] = [100, 250, 500, 750, 1000]
+COMMON_N_SAMPLES: list[int] = [
+    100,
+    250,
+    500,
+    750,
+    1000,
+    int(5.0e3),
+    int(1.0e4),
+    # int(2.5e4),
+    # int(5.0e4),
+    # int(1.0e5),
+]
 
 # ---------------------------------------------------------------------------
 # Jobs to run
 # ---------------------------------------------------------------------------
 JOBS: list[Job] = [
+    # Job(
+    #     pairs=[
+    #         Pair.PELT_L2,
+    #         Pair.MOVING_WINDOW_L2,
+    #         Pair.MOVING_WINDOW_L1,
+    #         Pair.BINSEG_L2_CUSUM,
+    #     ],
+    #     dimensions=[1, 2, 5],
+    #     min_segment_length=1,
+    #     output_name="various_mean_change",
+    #     n_samples=COMMON_N_SAMPLES,
+    # ),
+    # Job(
+    #     pairs=[Pair.PELT_1D_GAUSSIAN],
+    #     dimensions=[1],
+    #     # Fitting variance requires at least 2 samples per segment.
+    #     min_segment_length=2,
+    #     output_name="1d_gaussian",
+    #     n_samples=COMMON_N_SAMPLES,
+    # ),
     Job(
         pairs=[
-            Pair.PELT_L2,
-            Pair.MOVING_WINDOW_L2,
-            Pair.MOVING_WINDOW_L1,
-            Pair.BINSEG_L2_CUSUM,
-        ],
-        dimensions=[1, 2, 5],
-        min_segment_length=1,
-        output_name="various_mean_change",
-        n_samples=COMMON_N_SAMPLES,
-    ),
-    Job(
-        pairs=[Pair.PELT_1D_GAUSSIAN],
-        dimensions=[1],
-        # Fitting variance requires at least 2 samples per segment.
-        min_segment_length=2,
-        output_name="1d_gaussian",
-        n_samples=COMMON_N_SAMPLES,
-    ),
-    Job(
-        pairs=[
-            Pair.PELT_LINREG,
-            Pair.MOVING_WINDOW_LINREG,
+            # Pair.PELT_LINREG,
+            # Pair.MOVING_WINDOW_LINREG,
             Pair.BINSEG_LINREG,
         ],
         dimensions=[2],
@@ -117,20 +128,20 @@ JOBS: list[Job] = [
         output_name="linear_regression",
         n_samples=COMMON_N_SAMPLES,
     ),
-    Job(
-        pairs=[
-            Pair.MOVING_WINDOW_RANK,
-            Pair.PELT_RANK,
-            Pair.BINSEG_RANK,
-            Pair.BINSEG_MV_GAUSSIAN,
-            Pair.PELT_MV_GAUSSIAN,
-            Pair.MOVING_WINDOW_MV_GAUSSIAN,
-        ],
-        dimensions=[2, 5],
-        min_segment_length=6,  # must be > max(dimensions) for rank costs
-        output_name="multivariate_rank_and_mv_gaussian",
-        n_samples=COMMON_N_SAMPLES,
-    ),
+    # Job(
+    #     pairs=[
+    #         Pair.MOVING_WINDOW_RANK,
+    #         Pair.PELT_RANK,
+    #         Pair.BINSEG_RANK,
+    #         Pair.BINSEG_MV_GAUSSIAN,
+    #         Pair.PELT_MV_GAUSSIAN,
+    #         Pair.MOVING_WINDOW_MV_GAUSSIAN,
+    #     ],
+    #     dimensions=[2, 5],
+    #     min_segment_length=6,  # must be > max(dimensions) for rank costs
+    #     output_name="multivariate_rank_and_mv_gaussian",
+    #     n_samples=COMMON_N_SAMPLES,
+    # ),
 ]
 
 
