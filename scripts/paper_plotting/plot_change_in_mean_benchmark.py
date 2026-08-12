@@ -29,7 +29,7 @@ from change_bench.plotting import relative_speed_frame
 # Configuration
 # ---------------------------------------------------------------------------
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-benchmark_date = "2026-08-11"
+benchmark_date = "2026-08-12"
 RESULTS_PATH = (
     PROJECT_DIR
     / "results"
