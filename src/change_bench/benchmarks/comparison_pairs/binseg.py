@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.new_api.detectors import SeededBinarySegmentation
-from skchange.new_api.interval_scorers import CostChangeScore, L2Cost
+from skchange.new_api.interval_scorers import CUSUM
 
 from change_bench.benchmarks.comparison_pairs._common import (
     BenchmarkCase,
@@ -23,9 +23,7 @@ JOINT_PENALTY = 10.0
 
 
 def _make_sk_detector(msl: int):
-    return SeededBinarySegmentation(
-        change_score=CostChangeScore(L2Cost()), penalty=JOINT_PENALTY
-    )
+    return SeededBinarySegmentation(change_score=CUSUM(), penalty=JOINT_PENALTY)
 
 
 _CONFIG = PairConfig(

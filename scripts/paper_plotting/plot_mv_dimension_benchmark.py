@@ -8,7 +8,7 @@ function (L2, ESAC, MV Gaussian, rank). Color distinguishes package
 
 Run with::
 
-    uv run python scripts/plotting/plot_mv_dimension_benchmark.py
+    uv run python scripts/paper_plotting/plot_mv_dimension_benchmark.py
 """
 
 from __future__ import annotations
@@ -26,17 +26,22 @@ from change_bench.plotting import relative_speed_frame
 # Configuration
 # ---------------------------------------------------------------------------
 PROJECT_DIR = find_repo_root(Path(__file__))
+benchmark_date = "2026-08-11"
 RESULTS_PATH = (
     PROJECT_DIR
     / "results"
+    / "paper"
     / (
-        "multivariate-change-detection-benchmark_2026-08-10_"
+        f"multivariate-change-detection-benchmark_{benchmark_date}_"
         + "skchange-0.16.0_ruptures-1.1.10.parquet"
     )
 )
-OUTPUT_PATH = PROJECT_DIR / "figures" / "mv-dimension-benchmark.html"
+FIGURES_DIR = PROJECT_DIR / "figures" / "paper"
+OUTPUT_PATH = FIGURES_DIR / f"mv-dimension-benchmark-{benchmark_date}.html"
 OUTPUT_PATH_PDF = OUTPUT_PATH.with_suffix(".pdf")
-RELATIVE_OUTPUT_PATH = PROJECT_DIR / "figures" / "mv-dimension-benchmark-relative.html"
+RELATIVE_OUTPUT_PATH = (
+    FIGURES_DIR / f"mv-dimension-benchmark-relative-{benchmark_date}.html"
+)
 RELATIVE_OUTPUT_PATH_PDF = RELATIVE_OUTPUT_PATH.with_suffix(".pdf")
 USE_SKI_JUMP_AVERAGE: bool = True
 
@@ -149,9 +154,7 @@ def build_relative_speed_figure(df: pl.DataFrame, n_label: str) -> go.Figure:
             row=1,
             col=col_idx,
         )
-        fig.update_yaxes(
-            type="log", showticklabels=True, row=1, col=col_idx
-        )
+        fig.update_yaxes(type="log", showticklabels=True, row=1, col=col_idx)
 
     fig.add_hline(y=1, line=dict(color="#666666", dash="dash", width=1))
     fig.update_yaxes(title_text="relative runtime (ruptures / skchange)", row=1, col=1)
@@ -342,13 +345,13 @@ def main() -> None:
     fig.write_html(OUTPUT_PATH)
     fig.write_image(OUTPUT_PATH_PDF)
     print(f"Figure written to {OUTPUT_PATH} and {OUTPUT_PATH_PDF}")
-    fig.show()
+    # fig.show()
 
     relative_fig = build_relative_speed_figure(df, n_label)
     relative_fig.write_html(RELATIVE_OUTPUT_PATH)
     relative_fig.write_image(RELATIVE_OUTPUT_PATH_PDF)
     print(f"Figure written to {RELATIVE_OUTPUT_PATH} and {RELATIVE_OUTPUT_PATH_PDF}")
-    relative_fig.show()
+    # relative_fig.show()
 
 
 if __name__ == "__main__":

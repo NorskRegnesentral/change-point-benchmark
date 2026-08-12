@@ -6,7 +6,7 @@ binary segmentation on the same L1 change-in-mean problem. Run with::
 
     uv run python scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py
 
-Results are written to a versioned file in ``results``. Existing cases are
+Results are written to a versioned file. Existing cases are
 skipped unless :data:`OVERRIDE_RESULTS` is enabled.
 """
 
@@ -63,6 +63,7 @@ OUTPUT_PATH = prepare_results_path(
     f"change-in-mean-l1-benchmark_{RUN_STARTED_ON.isoformat()}_"
     f"skchange-{SKCHANGE_VERSION}_ruptures-{RUPTURES_VERSION}.parquet",
     Path(__file__),
+    subdir=Path("paper"),
 )
 
 _CASE_KEY_COLS = [

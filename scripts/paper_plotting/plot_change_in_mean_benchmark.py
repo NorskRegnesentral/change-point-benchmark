@@ -12,7 +12,7 @@ symbol distinguish the search algorithm.
 
 Run with::
 
-    uv run python scripts/plotting/plot_change_in_mean_benchmark.py
+    uv run python scripts/paper_plotting/plot_change_in_mean_benchmark.py
 """
 
 from __future__ import annotations
@@ -29,16 +29,24 @@ from change_bench.plotting import relative_speed_frame
 # Configuration
 # ---------------------------------------------------------------------------
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
+benchmark_date = "2026-08-11"
 RESULTS_PATH = (
     PROJECT_DIR
     / "results"
-    / "change-in-mean-benchmark_2026-08-10_skchange-0.16.0_ruptures-1.1.10.parquet"
+    / "paper"
+    / (
+        f"change-in-mean-benchmark_{benchmark_date}_"
+        + "skchange-0.16.0_ruptures-1.1.10.parquet"
+    )
 )
+
 # RESULTS_PATH = PROJECT_DIR / "results" / "old-change-in-mean-benchmark.parquet"
-FIGURES_DIR = PROJECT_DIR / "figures"
-OUTPUT_PATH = FIGURES_DIR / "change-in-mean-benchmark.html"
-OUTPUT_PATH_P1 = FIGURES_DIR / "change-in-mean-benchmark-p1.html"
-RELATIVE_OUTPUT_PATH = FIGURES_DIR / "change-in-mean-benchmark-relative.html"
+FIGURES_DIR = PROJECT_DIR / "figures" / "paper"
+OUTPUT_PATH = FIGURES_DIR / f"change-in-mean-benchmark-{benchmark_date}.html"
+OUTPUT_PATH_P1 = FIGURES_DIR / f"change-in-mean-benchmark-p1-{benchmark_date}.html"
+RELATIVE_OUTPUT_PATH = (
+    FIGURES_DIR / f"change-in-mean-benchmark-relative-{benchmark_date}.html"
+)
 OUTPUT_PATH_PDF = OUTPUT_PATH.with_suffix(".pdf")
 OUTPUT_PATH_P1_PDF = OUTPUT_PATH_P1.with_suffix(".pdf")
 RELATIVE_OUTPUT_PATH_PDF = RELATIVE_OUTPUT_PATH.with_suffix(".pdf")
@@ -319,20 +327,20 @@ def main() -> None:
     fig_all.write_html(OUTPUT_PATH)
     fig_all.write_image(OUTPUT_PATH_PDF)
     print(f"Figure written to {OUTPUT_PATH} and {OUTPUT_PATH_PDF}")
-    fig_all.show()
+    # fig_all.show()
 
     relative_fig = build_relative_speed_figure(df, dimensions)
     relative_fig.write_html(RELATIVE_OUTPUT_PATH)
     relative_fig.write_image(RELATIVE_OUTPUT_PATH_PDF)
     print(f"Figure written to {RELATIVE_OUTPUT_PATH} and {RELATIVE_OUTPUT_PATH_PDF}")
-    relative_fig.show()
+    # relative_fig.show()
 
     if 1 in available_dims:
         fig_p1 = build_figure(df, [1])
         fig_p1.write_html(OUTPUT_PATH_P1)
         fig_p1.write_image(OUTPUT_PATH_P1_PDF)
         print(f"Figure written to {OUTPUT_PATH_P1} and {OUTPUT_PATH_P1_PDF}")
-        fig_p1.show()
+        # fig_p1.show()
 
 
 if __name__ == "__main__":
