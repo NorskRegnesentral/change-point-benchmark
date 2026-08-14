@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import ruptures as rpt
-from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import CostChangeScore, LinearRegressionCost
+from skchange.detectors import MovingWindow
+from skchange.interval_scorers import CostChangeScore, LinearRegressionCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,

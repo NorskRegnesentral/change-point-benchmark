@@ -12,8 +12,8 @@ the effective minimum segment length is automatically adjusted per problem.
 from __future__ import annotations
 
 import ruptures as rpt
-from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import MultivariateGaussianScore
+from skchange.detectors import MovingWindow
+from skchange.interval_scorers import MultivariateGaussianScore
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,

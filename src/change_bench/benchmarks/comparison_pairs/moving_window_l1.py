@@ -10,8 +10,8 @@ ruptures: Window(model="l1", width=2*BW, min_size=1, jump=1)
 from __future__ import annotations
 
 import ruptures as rpt
-from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import CostChangeScore, L1Cost
+from skchange.detectors import MovingWindow
+from skchange.interval_scorers import CostChangeScore, L1Cost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,

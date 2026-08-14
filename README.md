@@ -121,12 +121,12 @@ The CLI (`uv run bench`) times each case using a two-phase protocol:
 2. `setup(data)` — creates a fresh detector per run (not timed)
 3. `func(det, data)` — the timed fit+predict (or predict-only) operation
 
-skchange detectors are benchmarked via the [`skchange.new_api`](https://github.com/NorskRegnesentral/skchange/tree/main/skchange/new_api)
-submodule, which provides an sklearn-compatible single-series API:
+skchange detectors are benchmarked via the [`skchange`](https://github.com/NorskRegnesentral/skchange)
+package's sklearn-compatible single-series API:
 
 ```python
-from skchange.new_api.detectors import PELT
-from skchange.new_api.interval_scorers import L2Cost
+from skchange.detectors import PELT
+from skchange.interval_scorers import L2Cost
 
 X = ...  # numpy array shape (n_samples, n_features)
 

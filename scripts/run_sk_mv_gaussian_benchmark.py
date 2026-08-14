@@ -24,9 +24,9 @@ import warnings
 from pathlib import Path
 
 import polars as pl
-from skchange.new_api.detectors import PELT as SkchangePELT
-from skchange.new_api.detectors import MovingWindow, SeededBinarySegmentation
-from skchange.new_api.interval_scorers import (
+from skchange.detectors import PELT as SkchangePELT
+from skchange.detectors import MovingWindow, SeededBinarySegmentation
+from skchange.interval_scorers import (
     MultivariateGaussianCost,
     MultivariateGaussianScore,
 )

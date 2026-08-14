@@ -10,8 +10,8 @@ the effective minimum segment length is automatically adjusted per problem.
 from __future__ import annotations
 
 import ruptures as rpt
-from skchange.new_api.detectors import PELT as SkchangePELT
-from skchange.new_api.interval_scorers import MultivariateGaussianCost
+from skchange.detectors import PELT as SkchangePELT
+from skchange.interval_scorers import MultivariateGaussianCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     PELT_PENALTY,

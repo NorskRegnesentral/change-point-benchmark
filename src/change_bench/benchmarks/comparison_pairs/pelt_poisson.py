@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import numpy as np
 import ruptures as rpt
-from skchange.new_api.detectors import PELT as SkchangePELT
-from skchange.new_api.interval_scorers import PoissonCost
+from skchange.detectors import PELT as SkchangePELT
+from skchange.interval_scorers import PoissonCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     PELT_PENALTY,

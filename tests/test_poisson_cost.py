@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from skchange.new_api.interval_scorers import PoissonCost
+from skchange.interval_scorers import PoissonCost
 
 from change_bench.benchmarks.comparison_pairs.pelt_poisson import CostPoisson
 

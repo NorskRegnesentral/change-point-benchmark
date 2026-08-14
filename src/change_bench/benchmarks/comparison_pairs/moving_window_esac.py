@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from skchange.new_api.detectors import MovingWindow
-from skchange.new_api.interval_scorers import ESACScore
+from skchange.detectors import MovingWindow
+from skchange.interval_scorers import ESACScore
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,

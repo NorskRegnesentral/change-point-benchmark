@@ -11,8 +11,8 @@ the end value.
 from __future__ import annotations
 
 import ruptures as rpt
-from skchange.new_api.detectors import PELT as SkchangePELT
-from skchange.new_api.interval_scorers import LinearTrendCost
+from skchange.detectors import PELT as SkchangePELT
+from skchange.interval_scorers import LinearTrendCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     PELT_PENALTY,

@@ -17,9 +17,9 @@ import argparse
 from collections import Counter
 
 import numpy as np
-from skchange.new_api.detectors import SeededBinarySegmentation
-from skchange.new_api.detectors._seeded_binseg import _score_seeded_intervals
-from skchange.new_api.interval_scorers import CostChangeScore, LinearRegressionCost
+from skchange.detectors import SeededBinarySegmentation
+from skchange.detectors._seeded_binseg import _score_seeded_intervals
+from skchange.interval_scorers import CostChangeScore, LinearRegressionCost
 
 
 def parse_args() -> argparse.Namespace:

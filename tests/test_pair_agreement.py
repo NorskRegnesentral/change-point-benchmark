@@ -16,14 +16,14 @@ import numpy as np
 import pytest
 import ruptures as rpt
 from ruptures.costs import CostLinear
-from skchange.new_api.detectors import (
+from skchange.detectors import (
     PELT as SkchangePELT,
 )
-from skchange.new_api.detectors import (
+from skchange.detectors import (
     MovingWindow,
     SeededBinarySegmentation,
 )
-from skchange.new_api.interval_scorers import (
+from skchange.interval_scorers import (
     CostChangeScore,
     ESACScore,
     GaussianCost,

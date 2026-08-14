@@ -7,8 +7,8 @@ ruptures: Pelt(model="normal", min_size=1, jump=1)
 from __future__ import annotations
 
 import ruptures as rpt
-from skchange.new_api.detectors import PELT as SkchangePELT
-from skchange.new_api.interval_scorers import GaussianCost
+from skchange.detectors import PELT as SkchangePELT
+from skchange.interval_scorers import GaussianCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     PELT_PENALTY,
