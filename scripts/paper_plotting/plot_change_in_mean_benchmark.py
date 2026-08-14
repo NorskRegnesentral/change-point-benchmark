@@ -29,14 +29,14 @@ from change_bench.plotting import relative_speed_frame
 # Configuration
 # ---------------------------------------------------------------------------
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-benchmark_date = "2026-08-12"
+benchmark_date = "2026-08-14"
 RESULTS_PATH = (
     PROJECT_DIR
     / "results"
     / "paper"
     / (
         f"change-in-mean-benchmark_{benchmark_date}_"
-        + "skchange-0.16.0_ruptures-1.1.10.parquet"
+        + "skchange-0.17.0_ruptures-1.1.10.parquet"
     )
 )
 

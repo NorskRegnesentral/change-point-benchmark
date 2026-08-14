@@ -26,14 +26,14 @@ from change_bench.plotting import relative_speed_frame
 # Configuration
 # ---------------------------------------------------------------------------
 PROJECT_DIR = find_repo_root(Path(__file__))
-benchmark_date = "2026-08-11"
+benchmark_date = "2026-08-14"
 RESULTS_PATH = (
     PROJECT_DIR
     / "results"
     / "paper"
     / (
         f"multivariate-change-detection-benchmark_{benchmark_date}_"
-        + "skchange-0.16.0_ruptures-1.1.10.parquet"
+        + "skchange-0.17.0_ruptures-1.1.10.parquet"
     )
 )
 FIGURES_DIR = PROJECT_DIR / "figures" / "paper"
