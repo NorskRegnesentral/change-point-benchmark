@@ -11,20 +11,21 @@ from skchange.detectors import PELT as SkchangePELT
 from skchange.interval_scorers import RankCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
-    PELT_PENALTY,
     BenchmarkCase,
     PairConfig,
     build_pair_cases,
 )
 from change_bench.problems.base import BenchmarkProblem
 
+JOINT_PELT_RANK_PENALTY = 20.0
+
 _CONFIG = PairConfig(
     pair_name="pelt_rank",
-    penalty=PELT_PENALTY,
+    penalty=JOINT_PELT_RANK_PENALTY,
     sk_name_prefix="skchange_pelt_rank",
     rpt_name_prefix="ruptures_pelt_rank",
     make_sk_detector=lambda msl: SkchangePELT(
-        cost=RankCost(), penalty=PELT_PENALTY, min_segment_length=msl
+        cost=RankCost(), penalty=JOINT_PELT_RANK_PENALTY, min_segment_length=msl
     ),
     make_rpt_algo=lambda msl: rpt.Pelt(model="rank", min_size=msl, jump=1),
     effective_msl=lambda msl, n_cols: max(msl, 2),

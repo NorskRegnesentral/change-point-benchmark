@@ -33,11 +33,13 @@ class BenchmarkCase:
     package: str
     cpd_algorithm: str
     name: str
+    problem_name: str
     n_samples: int
     n_changepoints: int
     data_dimension: int
     include_fit: bool
     min_segment_length: int
+    penalty: float | None
     prepare: Callable[[], np.ndarray]
     setup: Callable[[np.ndarray], tuple[tuple, dict]]
     func: Callable
@@ -162,11 +164,13 @@ def build_pair_cases(
                     package="skchange",
                     cpd_algorithm=config.pair_name,
                     name=f"{config.sk_name_prefix}/{problem.name}",
+                    problem_name=problem.name,
                     n_samples=cfg.n_samples,
                     n_changepoints=len(problem.true_changepoints),
                     data_dimension=cfg.n_columns,
                     include_fit=include_fit,
                     min_segment_length=eff_msl,
+                    penalty=config.penalty,
                     prepare=prepare,
                     setup=sk_setup,
                     func=sk_func,
@@ -193,11 +197,13 @@ def build_pair_cases(
                     package="ruptures",
                     cpd_algorithm=config.pair_name,
                     name=f"{config.rpt_name_prefix}/{problem.name}",
+                    problem_name=problem.name,
                     n_samples=cfg.n_samples,
                     n_changepoints=len(problem.true_changepoints),
                     data_dimension=cfg.n_columns,
                     include_fit=include_fit,
                     min_segment_length=eff_msl,
+                    penalty=config.penalty,
                     prepare=prepare,
                     setup=rpt_setup,
                     func=rpt_func,

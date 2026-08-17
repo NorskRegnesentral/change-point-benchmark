@@ -1,6 +1,6 @@
-"""MovingWindow + Rank cost comparison pair (multivariate only).
+"""MovingWindow + Rank score comparison pair (multivariate only).
 
-skchange: MovingWindow(change_score=CostChangeScore(RankCost()),
+skchange: MovingWindow(change_score=RankScore(),
                     penalty=P, bandwidth=BW)
 ruptures: Window(model="rank", width=2*BW, min_size=1, jump=1)
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.detectors import MovingWindow
-from skchange.interval_scorers import CostChangeScore, RankCost
+from skchange.interval_scorers import RankScore, RankCost, CostChangeScore
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,
@@ -19,12 +19,13 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.problems.base import BenchmarkProblem
 
-JOINT_MW_RANK_PENALTY = 4.0
+JOINT_MW_RANK_PENALTY = 20.0
 
 
 def _make_sk_detector(msl: int):
     return MovingWindow(
-        change_score=CostChangeScore(RankCost()),
+        # change_score=RankScore(),
+        change_score=CostChangeScore(RankCost(), deduplicate=False),
         penalty=JOINT_MW_RANK_PENALTY,
         bandwidth=MW_BANDWIDTH,
     )
@@ -48,7 +49,7 @@ def pair_moving_window_rank(
     include_fit: bool = True,
     min_segment_length: int = 1,
 ) -> list[BenchmarkCase]:
-    """Moving window with Rank cost (fixed bandwidth) — skchange vs ruptures."""
+    """Moving window with Rank score (fixed bandwidth) — skchange vs ruptures."""
     return build_pair_cases(
         problems,
         _CONFIG,

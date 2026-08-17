@@ -16,6 +16,7 @@ def test_existing_pair_collects_both_packages():
     )
 
     assert {case.package for case in cases} == {"skchange", "ruptures"}
+    assert {case.penalty for case in cases} == {10.0}
 
 
 @pytest.mark.parametrize(
@@ -42,6 +43,25 @@ def test_pelt_rank_enforces_cost_minimum_segment_length():
     )
 
     assert {case.min_segment_length for case in cases} == {2}
+
+
+def test_continuous_linear_trend_pairs_are_univariate_and_two_sided():
+    pairs = [
+        Pair.MOVING_WINDOW_CONTINUOUS_LINEAR_TREND,
+        Pair.BINSEG_CONTINUOUS_LINEAR_TREND,
+    ]
+    cases = collect_cases(
+        pairs=pairs,
+        n_samples_list=[100],
+        dimensions=[1, 3],
+        min_segment_length=1,
+    )
+
+    assert len(cases) == 4
+    assert {case.package for case in cases} == {"skchange", "ruptures"}
+    assert {case.cpd_algorithm for case in cases} == {pair.value for pair in pairs}
+    assert {case.data_dimension for case in cases} == {1}
+    assert {case.min_segment_length for case in cases} == {3}
 
 
 @pytest.mark.parametrize(

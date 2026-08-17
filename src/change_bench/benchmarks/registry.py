@@ -17,6 +17,7 @@ from enum import StrEnum
 
 from change_bench.benchmarks.comparison_pairs import (
     BenchmarkCase,
+    pair_binseg_continuous_linear_trend,
     pair_binseg_esac,
     pair_binseg_l1,
     pair_binseg_l2_cusum,
@@ -24,6 +25,7 @@ from change_bench.benchmarks.comparison_pairs import (
     pair_binseg_mv_gaussian,
     pair_binseg_rank,
     pair_moving_window_esac,
+    pair_moving_window_continuous_linear_trend,
     pair_moving_window_l1,
     pair_moving_window_l2,
     pair_moving_window_linreg,
@@ -63,9 +65,13 @@ class Pair(StrEnum):
     BINSEG_ESAC = "binseg_esac"
     BINSEG_RANK = "binseg_rank"
     BINSEG_LINREG = "binseg_linreg"
+    BINSEG_CONTINUOUS_LINEAR_TREND = "binseg_continuous_linear_trend"
     BINSEG_MV_GAUSSIAN = "binseg_mv_gaussian"
     PELT_MV_GAUSSIAN = "pelt_mv_gaussian"
     MOVING_WINDOW_MV_GAUSSIAN = "moving_window_mv_gaussian"
+    MOVING_WINDOW_CONTINUOUS_LINEAR_TREND = (
+        "moving_window_continuous_linear_trend"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -115,14 +121,22 @@ BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
     Pair.BINSEG_ESAC: pair_binseg_esac,
     Pair.BINSEG_RANK: pair_binseg_rank,
     Pair.BINSEG_LINREG: pair_binseg_linreg,
+    Pair.BINSEG_CONTINUOUS_LINEAR_TREND: pair_binseg_continuous_linear_trend,
     Pair.BINSEG_MV_GAUSSIAN: pair_binseg_mv_gaussian,
     Pair.PELT_MV_GAUSSIAN: pair_pelt_mv_gaussian,
     Pair.MOVING_WINDOW_MV_GAUSSIAN: pair_moving_window_mv_gaussian,
+    Pair.MOVING_WINDOW_CONTINUOUS_LINEAR_TREND: (
+        pair_moving_window_continuous_linear_trend
+    ),
 }
 
 #: Pairs that don't support data with more than one column (p > 1).
 #: Pairs in this set will only receive univariate (p=1) problems.
-NON_MULTIVARIATE_PAIRS: set[Pair] = {Pair.PELT_1D_GAUSSIAN}
+NON_MULTIVARIATE_PAIRS: set[Pair] = {
+    Pair.PELT_1D_GAUSSIAN,
+    Pair.BINSEG_CONTINUOUS_LINEAR_TREND,
+    Pair.MOVING_WINDOW_CONTINUOUS_LINEAR_TREND,
+}
 
 #: Pairs that ONLY make sense for multivariate data (p > 1).
 #: Pairs in this set will only receive problems where p > 1.
@@ -167,6 +181,10 @@ PAIR_CATEGORIES: dict[str, list[Pair]] = {
         Pair.PELT_LINREG,
         Pair.MOVING_WINDOW_LINREG,
         Pair.BINSEG_LINREG,
+    ],
+    "continuous_linear_trend": [
+        Pair.MOVING_WINDOW_CONTINUOUS_LINEAR_TREND,
+        Pair.BINSEG_CONTINUOUS_LINEAR_TREND,
     ],
     "multivariate_dimension": [
         Pair.PELT_L2,

@@ -315,6 +315,16 @@ def build_relative_speed_figure(df: pl.DataFrame, dimensions: list[int]) -> go.F
     )
     return fig
 
+# TODO:
+# 1. I stedet for "matrise"-Legende, list opp "pakke + algoritme" som separate 
+#    linjer i legend.
+#   - "Skchange - PELT", "Ruptures, PELT", "Skchange MovingWindow", "Ruptures, Window",
+#     "Skchange SeededBinarySegmentation", "Ruptures Binseg". 
+#   - Hver sine linjer?
+#   - Flytte Legend under, dele med "Rank"-figuren.
+# - Prøve én farge per "algoritme-pakke" vakke.
+# - Prøve: Farge per algoritme, linjetype per pakke.
+# - 
 
 def main() -> None:
     df = pl.read_parquet(RESULTS_PATH).filter(pl.col("include_fit"))
@@ -327,20 +337,20 @@ def main() -> None:
     fig_all.write_html(OUTPUT_PATH)
     fig_all.write_image(OUTPUT_PATH_PDF)
     print(f"Figure written to {OUTPUT_PATH} and {OUTPUT_PATH_PDF}")
-    # fig_all.show()
+    fig_all.show()
 
     relative_fig = build_relative_speed_figure(df, dimensions)
     relative_fig.write_html(RELATIVE_OUTPUT_PATH)
     relative_fig.write_image(RELATIVE_OUTPUT_PATH_PDF)
     print(f"Figure written to {RELATIVE_OUTPUT_PATH} and {RELATIVE_OUTPUT_PATH_PDF}")
-    # relative_fig.show()
+    relative_fig.show()
 
-    if 1 in available_dims:
-        fig_p1 = build_figure(df, [1])
-        fig_p1.write_html(OUTPUT_PATH_P1)
-        fig_p1.write_image(OUTPUT_PATH_P1_PDF)
-        print(f"Figure written to {OUTPUT_PATH_P1} and {OUTPUT_PATH_P1_PDF}")
-        # fig_p1.show()
+    # if 1 in available_dims:
+    #     fig_p1 = build_figure(df, [1])
+    #     fig_p1.write_html(OUTPUT_PATH_P1)
+    #     fig_p1.write_image(OUTPUT_PATH_P1_PDF)
+    #     print(f"Figure written to {OUTPUT_PATH_P1} and {OUTPUT_PATH_P1_PDF}")
+    #     # fig_p1.show()
 
 
 if __name__ == "__main__":
