@@ -316,7 +316,7 @@ def build_relative_speed_figure(df: pl.DataFrame, dimensions: list[int]) -> go.F
     return fig
 
 # TODO:
-# 1. I stedet for "matrise"-Legende, list opp "pakke + algoritme" som separate 
+# 1. I stedet for "matrise"-Legende, list opp "pakke + algoritme" som separate A
 #    linjer i legend.
 #   - "Skchange - PELT", "Ruptures, PELT", "Skchange MovingWindow", "Ruptures, Window",
 #     "Skchange SeededBinarySegmentation", "Ruptures Binseg". 

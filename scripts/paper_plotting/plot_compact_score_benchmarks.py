@@ -17,13 +17,19 @@ from change_bench.plotting import relative_speed_frame
 
 PROJECT_DIR = find_repo_root(Path(__file__))
 RESULTS_DIR = PROJECT_DIR / "results" / "paper"
-FIGURES_DIR = PROJECT_DIR / "figures" / "paper"
+FIGURES_DIR = PROJECT_DIR / "figures" / "paper" / "compact"
 FIGURE_DATE = date.today().isoformat()
 SKCHANGE_VERSION = version("skchange")
 RUPTURES_VERSION = version("ruptures")
 METRIC_COL = "ski_jump_mean_s"
 
 PACKAGE_COLORS = {"skchange": "#1f77b4", "ruptures": "#ff7f0e"}
+PACKAGE_LABELS = {"skchange": "Skchange", "ruptures": "Ruptures"}
+PACKAGE_SEARCH_LABELS = {
+    ("skchange", "moving_window"): "MovingWindow",
+    ("ruptures", "moving_window"): "Window",
+    ("skchange", "binseg"): "Seeded Bin. Seg",
+}
 SEARCH_STYLES = {
     "pelt": ("solid", "circle", "#2ca02c", "PELT"),
     "moving_window": ("dash", "square-open", "#9467bd", "Moving window"),
@@ -43,7 +49,7 @@ class PanelSpec:
 PANELS = [
     PanelSpec(
         key="l2-cusum",
-        title="L2Cost / CUSUM (p=1)",
+        title="L2Cost, p=1",
         result_prefix="change-in-mean-benchmark",
         dimension=1,
         algorithms={
@@ -52,17 +58,17 @@ PANELS = [
             "binseg": "binseg_l2_cusum",
         },
     ),
-    # PanelSpec(
-    #     key="rank",
-    #     title="RankCost / RankScore (p=10)",
-    #     result_prefix="rank-score-benchmark",
-    #     dimension=10,
-    #     algorithms={
-    #         "pelt": "pelt_rank",
-    #         "moving_window": "moving_window_rank",
-    #         "binseg": "binseg_rank",
-    #     },
-    # ),
+    PanelSpec(
+        key="rank",
+        title="RankCost, p=10",
+        result_prefix="rank-score-benchmark",
+        dimension=10,
+        algorithms={
+            "pelt": "pelt_rank",
+            "moving_window": "moving_window_rank",
+            "binseg": "binseg_rank",
+        },
+    ),
     # PanelSpec(
     #     key="linear-trend",
     #     title="Continuous trend score (p=1)",
@@ -117,7 +123,7 @@ def build_absolute_figure(
         cols=len(panel_frames),
         subplot_titles=[panel.title for panel, _ in panel_frames],
         shared_yaxes=True,
-        horizontal_spacing=0.08,
+        horizontal_spacing=0.04,
     )
     shown: set[str] = set()
     for column, (panel, frame) in enumerate(panel_frames, start=1):
@@ -128,12 +134,10 @@ def build_absolute_figure(
                     (pl.col("cpd_algorithm") == algorithm)
                     & (pl.col("package") == package)
                 ).sort("n_samples")
-                package_search_label = (
-                    "Seeded Bin. Seg"
-                    if package == "skchange" and search == "binseg"
-                    else search_label
+                package_search_label = PACKAGE_SEARCH_LABELS.get(
+                    (package, search), search_label
                 )
-                legend_name = f"{package}: {package_search_label}"
+                legend_name = f"{PACKAGE_LABELS[package]}: {package_search_label}"
                 figure.add_trace(
                     go.Scatter(
                         x=line["n_samples"],
@@ -145,7 +149,7 @@ def build_absolute_figure(
                         line=dict(color=color, dash=dash, width=1.8),
                         marker=dict(color=color, symbol=symbol, size=6),
                         hovertemplate=(
-                            f"{legend_name}<br>n=%{{x}}<br>runtime=%{{y:.3g}} s"
+                            f"{legend_name}<br>n=%{{x}}<br>Runtime=%{{y:.3g}} s"
                             "<extra></extra>"
                         ),
                     ),
@@ -154,9 +158,9 @@ def build_absolute_figure(
                 )
                 shown.add(legend_name)
         figure.update_xaxes(type="log", title_text="n", row=1, col=column)
-        figure.update_yaxes(type="log", row=1, col=column)
+        figure.update_yaxes(type="log", showticklabels=True, row=1, col=column)
 
-    figure.update_yaxes(title_text="runtime (s)", row=1, col=1)
+    figure.update_yaxes(title_text="Runtime (s)", row=1, col=1)
     _apply_compact_layout(figure, len(panel_frames))
     return figure
 
@@ -170,7 +174,7 @@ def build_relative_figure(
         cols=len(panel_frames),
         subplot_titles=[panel.title for panel, _ in panel_frames],
         shared_yaxes=True,
-        horizontal_spacing=0.08,
+        horizontal_spacing=0.04,
     )
     shown: set[str] = set()
     for column, (panel, frame) in enumerate(panel_frames, start=1):
@@ -193,7 +197,7 @@ def build_relative_figure(
                     line=dict(color=color, dash=dash, width=1.8),
                     marker=dict(color=color, symbol=symbol, size=6),
                     hovertemplate=(
-                        f"{search_label}<br>n=%{{x}}<br>ruptures/skchange=%{{y:.2f}}x"
+                        f"{search_label}<br>n=%{{x}}<br>Ruptures/Skchange=%{{y:.2f}}x"
                         "<extra></extra>"
                     ),
                 ),
@@ -202,10 +206,10 @@ def build_relative_figure(
             )
             shown.add(search)
         figure.update_xaxes(type="log", title_text="n", row=1, col=column)
-        figure.update_yaxes(type="log", row=1, col=column)
+        figure.update_yaxes(type="log", showticklabels=True, row=1, col=column)
 
     figure.add_hline(y=1, line=dict(color="#666666", dash="dash", width=1))
-    figure.update_yaxes(title_text="runtime ratio", row=1, col=1)
+    figure.update_yaxes(title_text="Runtime ratio", row=1, col=1)
     _apply_compact_layout(figure, len(panel_frames))
     return figure
 
