@@ -127,7 +127,7 @@ requires-dist = [
     { name = "pyinstrument", specifier = ">=5.1.2" },
     { name = "ruptures", specifier = ">=1.1" },
     { name = "scipy", specifier = ">=1.13" },
-    { name = "skchange", extras = ["numba"], editable = "../skchange" },
+    { name = "skchange", extras = ["numba"] },
 ]
 
 [package.metadata.requires-dev]
@@ -1198,54 +1198,20 @@ wheels = [
 [[package]]
 name = "skchange"
 version = "0.17.0"
-source = { editable = "../skchange" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "scikit-learn" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e5/e4/0e35c992209e2c52fc9069afa50d86f09664bbcc5b91c9be0452f114a587/skchange-0.17.0.tar.gz", hash = "sha256:0f214a94f0a5023ab6a8c0be265fec1623dc8dd78d44c866063116d767428a03", size = 2416580, upload-time = "2026-08-14T09:32:08.947Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/c0/d6bca2b49f82090fa467fee4c481ac7fafd5ffa49d8b58bbff067464423c/skchange-0.17.0-py3-none-any.whl", hash = "sha256:7cce60d4846963055937ab397d3824f3742a73cec2e2ce375095f0330214275c", size = 2509531, upload-time = "2026-08-14T09:32:07.31Z" },
 ]
 
 [package.optional-dependencies]
 numba = [
     { name = "numba" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "ipykernel", marker = "extra == 'dev'" },
-    { name = "ipykernel", marker = "extra == 'docs'" },
-    { name = "myst-parser", marker = "extra == 'docs'" },
-    { name = "nbformat", marker = "extra == 'dev'", specifier = ">=4.2.0" },
-    { name = "nbformat", marker = "extra == 'docs'", specifier = ">=4.2.0" },
-    { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "nbstripout", marker = "extra == 'docs'" },
-    { name = "numba", marker = "extra == 'all-extras'", specifier = ">=0.61,<0.68" },
-    { name = "numba", marker = "extra == 'numba'", specifier = ">=0.61,<0.68" },
-    { name = "numpy", specifier = ">=1.21" },
-    { name = "numpydoc", marker = "extra == 'docs'" },
-    { name = "pandas", marker = "extra == 'docs'", specifier = ">=1.1" },
-    { name = "plotly", marker = "extra == 'dev'" },
-    { name = "plotly", marker = "extra == 'docs'" },
-    { name = "plotly", marker = "extra == 'test'" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "pydata-sphinx-theme", marker = "extra == 'docs'" },
-    { name = "pypandoc", marker = "extra == 'docs'" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'test'" },
-    { name = "pytest-cov", marker = "extra == 'dev'" },
-    { name = "pytest-cov", marker = "extra == 'test'" },
-    { name = "ruptures", marker = "extra == 'dev'" },
-    { name = "ruptures", marker = "extra == 'test'", specifier = ">=1.1.11rc1" },
-    { name = "scikit-learn", specifier = ">=1.6" },
-    { name = "scipy", marker = "extra == 'dev'", specifier = ">=1.14.1,<2.0.0" },
-    { name = "sphinx", marker = "extra == 'docs'" },
-    { name = "sphinx-copybutton", marker = "extra == 'docs'" },
-    { name = "sphinx-design", marker = "extra == 'docs'" },
-    { name = "sphinx-gallery", marker = "extra == 'docs'" },
-    { name = "sphinx-issues", marker = "extra == 'docs'" },
-    { name = "tabulate", marker = "extra == 'docs'" },
-    { name = "typing-extensions", marker = "extra == 'test'" },
-]
-provides-extras = ["numba", "all-extras", "test", "dev", "docs"]
 
 [[package]]
 name = "stack-data"

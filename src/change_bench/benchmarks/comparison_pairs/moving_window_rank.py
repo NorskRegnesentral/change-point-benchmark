@@ -24,7 +24,7 @@ JOINT_MW_RANK_PENALTY = 100.0
 
 def _make_sk_detector(msl: int):
     return MovingWindow(
-        change_score=CostChangeScore(RankCost(), deduplicate=True),
+        change_score=CostChangeScore(RankCost()),
         penalty=JOINT_MW_RANK_PENALTY,
         bandwidth=MW_BANDWIDTH,
     )

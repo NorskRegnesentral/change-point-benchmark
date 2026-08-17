@@ -16,7 +16,7 @@ from change_bench.paths import find_repo_root
 from change_bench.plotting import relative_speed_frame
 
 PROJECT_DIR = find_repo_root(Path(__file__))
-RESULTS_DIR = PROJECT_DIR / "results" / "paper"
+RESULTS_DIR = PROJECT_DIR / "results" / "paper" / "visualized_results"
 FIGURES_DIR = PROJECT_DIR / "figures" / "paper" / "compact"
 FIGURE_DATE = date.today().isoformat()
 SKCHANGE_VERSION = version("skchange")
@@ -29,6 +29,7 @@ PACKAGE_SEARCH_LABELS = {
     ("skchange", "moving_window"): "MovingWindow",
     ("ruptures", "moving_window"): "Window",
     ("skchange", "binseg"): "Seeded Bin. Seg",
+    ("ruptures", "binseg"): "Binseg",
 }
 SEARCH_STYLES = {
     "pelt": ("solid", "circle", "#2ca02c", "PELT"),
@@ -49,7 +50,7 @@ class PanelSpec:
 PANELS = [
     PanelSpec(
         key="l2-cusum",
-        title="L2Cost, p=1",
+        title="L2Cost, 1 feature",
         result_prefix="change-in-mean-benchmark",
         dimension=1,
         algorithms={
@@ -60,7 +61,7 @@ PANELS = [
     ),
     PanelSpec(
         key="rank",
-        title="RankCost, p=10",
+        title="RankCost, 10 features",
         result_prefix="rank-score-benchmark",
         dimension=10,
         algorithms={
@@ -149,7 +150,8 @@ def build_absolute_figure(
                         line=dict(color=color, dash=dash, width=1.8),
                         marker=dict(color=color, symbol=symbol, size=6),
                         hovertemplate=(
-                            f"{legend_name}<br>n=%{{x}}<br>Runtime=%{{y:.3g}} s"
+                            f"{legend_name}<br>Number of samples=%{{x}}"
+                            "<br>Wall time=%{y:.3g} s"
                             "<extra></extra>"
                         ),
                     ),
@@ -157,10 +159,12 @@ def build_absolute_figure(
                     col=column,
                 )
                 shown.add(legend_name)
-        figure.update_xaxes(type="log", title_text="n", row=1, col=column)
+        figure.update_xaxes(
+            type="log", title_text="Number of samples", row=1, col=column
+        )
         figure.update_yaxes(type="log", showticklabels=True, row=1, col=column)
 
-    figure.update_yaxes(title_text="Runtime (s)", row=1, col=1)
+    figure.update_yaxes(title_text="Wall time (s)", row=1, col=1)
     _apply_compact_layout(figure, len(panel_frames))
     return figure
 
@@ -205,11 +209,13 @@ def build_relative_figure(
                 col=column,
             )
             shown.add(search)
-        figure.update_xaxes(type="log", title_text="n", row=1, col=column)
+        figure.update_xaxes(
+            type="log", title_text="Number of samples", row=1, col=column
+        )
         figure.update_yaxes(type="log", showticklabels=True, row=1, col=column)
 
     figure.add_hline(y=1, line=dict(color="#666666", dash="dash", width=1))
-    figure.update_yaxes(title_text="Runtime ratio", row=1, col=1)
+    figure.update_yaxes(title_text="Wall-time ratio", row=1, col=1)
     _apply_compact_layout(figure, len(panel_frames))
     return figure
 
@@ -228,7 +234,7 @@ def _apply_compact_layout(figure: go.Figure, n_panels: int) -> None:
             xanchor="center",
             y=-0.25,
             yanchor="top",
-            font=dict(size=9),
+            font=dict(size=11),
         ),
     )
     figure.update_annotations(font=dict(size=11))
@@ -263,3 +269,8 @@ if __name__ == "__main__":
     main()
 
 # %%
+
+# Machine information:
+# CPU: Intel Xeon Silver 4110 @ 2.10 GHz
+# RAM: 49 GiB
+# OS: Ubuntu 22.04.5 LTS

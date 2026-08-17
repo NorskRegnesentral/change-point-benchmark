@@ -112,9 +112,7 @@ def main() -> int:
 
     for benchmark in selected:
         module = load_benchmark_module(BENCHMARK_FILES[benchmark])
-        cases = collect_benchmark_cases(
-            module, max_n_samples=args.max_n_samples
-        )
+        cases = collect_benchmark_cases(module, max_n_samples=args.max_n_samples)
         results, skipped = verify_cases(cases)
         total_results += len(results)
         total_skipped += len(skipped)

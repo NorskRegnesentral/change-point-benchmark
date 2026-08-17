@@ -21,7 +21,7 @@ _CONFIG = PairConfig(
     sk_name_prefix="skchange_seeded_binseg_rank",
     rpt_name_prefix="ruptures_binseg_rank",
     make_sk_detector=lambda msl: SeededBinarySegmentation(
-        change_score=CostChangeScore(RankCost(), deduplicate=True),
+        change_score=CostChangeScore(RankCost()),
         penalty=JOINT_BINSEG_RANK_PENALTY,
     ),
     make_rpt_algo=lambda msl: rpt.Binseg(model="rank", min_size=msl, jump=1),
