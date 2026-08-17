@@ -25,7 +25,7 @@ import polars as pl
 from change_bench.benchmarks.comparison_pairs._common import BenchmarkCase
 from change_bench.benchmarks.registry import Pair, collect_cases
 from change_bench.paths import prepare_results_path
-from change_bench.runner import run_benchmark
+from change_bench.runner import print_penalty_summary, run_benchmark
 
 # ============================================================================
 # Configuration
@@ -186,6 +186,7 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
     output_frame.write_parquet(OUTPUT_PATH)
     print(f"Finished in {elapsed:.1f}s ({len(results)} new result(s)).")
     print(f"Results written to {OUTPUT_PATH}")
+    print_penalty_summary(output_frame)
 
 
 # ============================================================================

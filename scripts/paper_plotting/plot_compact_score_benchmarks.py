@@ -243,21 +243,24 @@ def _apply_compact_layout(figure: go.Figure, n_panels: int) -> None:
 def _write_figure(figure: go.Figure, stem: str) -> None:
     html_path = FIGURES_DIR / f"{stem}-{FIGURE_DATE}.html"
     pdf_path = html_path.with_suffix(".pdf")
+    # Stable-named PNG so README image links never go stale.
+    png_path = FIGURES_DIR / f"{stem}.png"
     figure.write_html(html_path, include_plotlyjs="cdn")
     figure.write_image(pdf_path)
-    print(f"Figure written to {html_path} and {pdf_path}")
+    figure.write_image(png_path, scale=2)
+    print(f"Figure written to {html_path}, {pdf_path} and {png_path}")
 
 
 def main() -> None:
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     panel_frames = [(panel, load_panel_frame(panel)) for panel in PANELS]
 
-    for panel, frame in panel_frames:
-        _write_figure(build_absolute_figure([(panel, frame)]), f"compact-{panel.key}")
-        _write_figure(
-            build_relative_figure([(panel, frame)]),
-            f"compact-{panel.key}-relative",
-        )
+    # for panel, frame in panel_frames:
+    #     _write_figure(build_absolute_figure([(panel, frame)]), f"compact-{panel.key}")
+    #     _write_figure(
+    #         build_relative_figure([(panel, frame)]),
+    #         f"compact-{panel.key}-relative",
+    #   )
 
     _write_figure(build_absolute_figure(panel_frames), "compact-score-benchmarks")
     _write_figure(

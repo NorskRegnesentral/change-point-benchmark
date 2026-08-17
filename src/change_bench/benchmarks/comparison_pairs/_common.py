@@ -46,6 +46,8 @@ class BenchmarkCase:
 
 
 #: Penalty used for all PELT-based pairs (same for skchange and ruptures).
+#: Set high enough that no spurious change points are detected on null data;
+#: penalty and n_detected_changepoints are recorded in every result file.
 PELT_PENALTY: float = 100.0
 
 #: Bandwidth for moving-window pairs.

@@ -1,215 +1,131 @@
 # change-point-benchmark
 
-Repository for benchmarking the performance of change-point detection packages,
+Benchmarks comparing the runtime performance of change-point detection packages,
 primarily [skchange](https://github.com/NorskRegnesentral/skchange) vs.
 [ruptures](https://github.com/deepcharles/ruptures).
 
-## Project layout
+> **Looking for the results?** All benchmark result files (Parquet) are in
+> [results/paper/](results/paper/), with the curated results behind the figures
+> below in [results/paper/visualized_results/](results/paper/visualized_results/).
+> All generated figures (HTML, PDF, PNG) are in [figures/paper/](figures/paper/).
 
-```
-change-point-benchmark/
-├── pyproject.toml               # uv-managed project config & dependencies
-├── scripts/
-│   ├── run_benchmarks.sh        # run all benchmark categories & save results
-│   └── analyse_results.py       # load results, plot & summarise
-├── src/
-│   └── change_bench/            # installable "change_bench" package
-│       ├── cli.py               # `uv run bench` entry point
-│       ├── runner.py            # timing harness (prepare/setup/func)
-│       ├── datasets/
-│       │   └── null_case.py     # null-case dataset generators
-│       ├── problems/
-│       │   └── base.py          # BenchmarkProblem dataclass & factories
-│       └── benchmarks/
-│           ├── registry.py      # pair registry, categories & collect_cases()
-│           └── comparison_pairs/
-│               ├── _common.py             # BenchmarkCase, shared constants & helpers
-│               ├── pelt_l2.py             # PELT + L2 cost
-│               ├── pelt_gaussian.py       # PELT + Gaussian cost (1-D only)
-│               ├── pelt_poisson.py        # PELT + Poisson cost (custom ruptures BaseCost)
-│               ├── pelt_linear_trend.py   # PELT + linear trend cost
-│               ├── moving_window.py       # MovingWindow + CUSUM
-│               ├── moving_window_l2.py    # MovingWindow + L2 (fixed bandwidth)
-│               ├── moving_window_l1.py    # MovingWindow + L1 (fixed bandwidth)
-│               ├── moving_window_rank.py  # MovingWindow + Rank (multivariate only)
-│               └── binseg.py              # Binary Segmentation + CUSUM
-└── tests/
-    ├── test_null_datasets.py    # unit tests for dataset generation
-    ├── test_problems.py         # unit tests for problem definitions
-    └── test_poisson_cost.py     # verify custom Poisson cost matches skchange
-```
+## Headline results
 
-## Requirements
+Wall time of full change-point detection (fit + predict) on null data, for a
+univariate change-in-mean setup (`L2Cost`, 1 feature) and a multivariate
+rank-based setup (`RankCost`, 10 features):
 
-* Python 3.12+
-* [uv](https://docs.astral.sh/uv/) package manager
+![Compact score benchmarks](figures/paper/compact/compact-score-benchmarks.png)
+
+The same comparison as relative speedup (ruptures runtime divided by skchange
+runtime; values above 1 mean skchange is faster):
+
+![Compact score benchmarks, relative](figures/paper/compact/compact-score-benchmarks-relative.png)
+
+Benchmarks were run on an Intel 10 Core Xeon Silver 4110 @ 2.10 GHz with 49 GiB RAM,
+Ubuntu 22.04.5 LTS.
 
 ## Getting started
 
-```bash
-# sync all dependencies (including dev group)
-uv sync --dev
-
-# run the unit tests
-uv run pytest tests/ -v
-
-# run a quick benchmark (single pair, 2 runs)
-uv run bench --pairs pelt_l2 --runs 2 -o results/pelt_l2.parquet
-
-# run all benchmarks via the helper script (writes results/*.parquet)
-./scripts/run_benchmarks.sh --runs 10
-
-# analyse results (loads & concatenates all parquet files in results/)
-uv run scripts/analyse_results.py
-```
-
-## Key concepts
-
-### Dataset generation
-
-A `NullDatasetConfig` describes a dataset with **no change points in the mean**.
-Data can be drawn from any of the named distributions or from an arbitrary frozen
-`scipy.stats` distribution:
-
-```python
-import numpy as np
-from change_bench.datasets.null_case import NullDatasetConfig
-
-rng = np.random.default_rng(42)
-
-# Named distribution + scale parameter
-cfg = NullDatasetConfig(n_samples=1000, distribution="normal", scale=2.0)
-data = cfg.generate(rng)          # shape (1000, 1)
-
-# Student-t with custom df
-cfg_t = NullDatasetConfig(n_samples=1000, distribution="t", scale=1.0, df=3.0)
-
-# Pass a frozen scipy distribution directly
-from scipy import stats as sp_stats
-frozen = sp_stats.norm(loc=0, scale=3)
-cfg_custom = NullDatasetConfig(n_samples=1000, distribution=frozen)
-```
-
-Supported named distributions: `normal`, `t`, `gamma`, `laplace`, `uniform`,
-`exponential`, `lognormal`.
-
-### Problem definitions
-
-A `BenchmarkProblem` couples a `NullDatasetConfig` with ground-truth
-change-point locations (empty list for null-case problems):
-
-```python
-from change_bench.problems.base import make_null_problems
-
-# Create a standard battery of null problems
-problems = make_null_problems(
-    n_samples_list=[500, 1000, 5000],
-    distributions=["normal", "t", "gamma"],
-    scale=1.0,
-)
-```
-
-### Benchmarks
-
-Benchmarks are organised as **comparison pairs**. Most pairs contain a
-skchange detector and its equivalent ruptures detector; one-sided pairs are
-also supported when no meaningful counterpart exists, such as ESAC.
-
-The CLI (`uv run bench`) times each case using a two-phase protocol:
-
-1. `prepare()` — generates data just-in-time (not timed)
-2. `setup(data)` — creates a fresh detector per run (not timed)
-3. `func(det, data)` — the timed fit+predict (or predict-only) operation
-
-skchange detectors are benchmarked via the [`skchange`](https://github.com/NorskRegnesentral/skchange)
-package's sklearn-compatible single-series API:
-
-```python
-from skchange.detectors import PELT
-from skchange.interval_scorers import L2Cost
-
-X = ...  # numpy array shape (n_samples, n_features)
-
-det = PELT(cost=L2Cost())
-det.fit(X)
-changepoints = det.predict_changepoints(X)  # np.ndarray of indices
-labels       = det.predict(X)               # dense segment labels (n_samples,)
-```
+Requires Python 3.12+ and the [uv](https://docs.astral.sh/uv/) package manager.
 
 ```bash
-# List all available benchmark cases
-uv run bench --list
-
-# Run specific pairs with multivariate data
-uv run bench --pairs pelt_l2 moving_window_rank --dimensions 1 2 5 --runs 10
-
-# Run the fixed-n, increasing-dimension benchmark
-uv run python scripts/run_multivariate_dimension_benchmark.py
+uv sync --dev              # install all dependencies
+uv run pytest tests/       # run the unit tests
+uv run bench --list        # list all available comparison pairs
 ```
 
-## Ruptures - Skchange comparison pairs
+Ad-hoc benchmark runs use the `bench` CLI:
 
-Costs/scores:
-- CUSUM/L2Cost/rpt.CostL2
-- L1Cost/rpt.CostL1
-- MultivariateGaussianScore/MultivariateGaussianCost/rpt.CostNormal
-- PoissonCost/rpt.CostPoisson
+```bash
+uv run bench --pairs pelt_l2 --n-samples 1000 5000 --runs 5 -o results/pelt_l2.parquet
+```
 
-All combinations of the costs/score above inside the following detectors:
-- PELT/rpt.Pelt
-- MovingWindow/rpt.Window
-- SeededBinarySegmentation/rpt.Binseg
+## Reproducing the figures
 
+Each figure is produced by a benchmark script (writes Parquet to
+`results/paper/`) followed by a plotting script (writes HTML/PDF/PNG to
+`figures/paper/`), all run via `uv run python <script>`. The compact score
+figure reads its results from `results/paper/visualized_results/`, so move
+fresh result files there before re-plotting it:
+
+| Figure | Benchmark script(s) | Plotting script |
+|--------|---------------------|-----------------|
+| Compact score comparison (above) | `scripts/paper_benchmarks/run_change_in_mean_benchmark.py`, `scripts/paper_benchmarks/run_rank_score_benchmark.py` | `scripts/paper_plotting/plot_compact_score_benchmarks.py` |
+| Change-in-mean (L2) | `scripts/paper_benchmarks/run_change_in_mean_benchmark.py` | `scripts/paper_plotting/plot_change_in_mean_benchmark.py` |
+| Robust change-in-mean (L1) | `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py` | `scripts/paper_plotting/plot_l1_change_in_mean_benchmark.py` |
+| Multivariate dimension sweep | `scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py` | `scripts/paper_plotting/plot_mv_dimension_benchmark.py` |
+
+The benchmark scripts are resumable: completed cases found in the output
+Parquet file are skipped, so an interrupted run can simply be restarted.
+
+## Methodology
+
+Benchmarks are organised as **comparison pairs**: a skchange detector and its
+closest ruptures equivalent, configured to be as comparable as possible (same
+penalty, minimum segment length, window width, etc.). One-sided pairs are used
+where no counterpart exists (e.g. ESAC).
+
+The timed operations are:
+
+- skchange: `detector.fit(X).predict_changepoints(X)`
+- ruptures: `detector.fit_predict(X, pen=penalty)`
+
+Each case is timed over several repetitions with garbage collection disabled,
+and summary statistics (mean, std, median, min, and trimmed variants) are
+stored per case.
+
+### Penalties and spurious detections
+
+All benchmarks run on null data (no true change points) with a penalty set
+high enough that no spurious change points are detected. The configured
+`penalty` and the observed `n_detected_changepoints` are stored in every
+result file and printed as a summary table at the end of each benchmark run,
+so users can confirm that all timings correspond to zero detections.
+
+### Comparison pairs
 
 | Pair name | ruptures | skchange |
 |-----------|----------|----------|
 | `pelt_l2` | `KernelCPD("linear")` | `PELT(L2Cost())` |
 | `pelt_l1` | `Pelt("l1")` | `PELT(L1Cost())` |
-| `pelt_gaussian` | `Pelt("normal")` | `PELT(MultivariateGaussianCost())` |
+| `pelt_1d_gaussian` | `Pelt("normal")` | `PELT(GaussianCost())` |
+| `pelt_mv_gaussian` | `Pelt("normal")` | `PELT(MultivariateGaussianCost())` |
+| `pelt_poisson` | custom `BaseCost` | `PELT(PoissonCost())` |
+| `pelt_rank` | `Pelt("rank")` | `PELT(RankCost())` |
 | `moving_window_l2` | `Window("l2")` | `MovingWindow(CUSUM())` |
 | `moving_window_l1` | `Window("l1")` | `MovingWindow(CostChangeScore(L1Cost()))` |
-| `moving_window_gaussian` | `Window("normal")` | `MovingWindow(MultivariateGaussianScore())` |
-| `binseg_l2` | `Binseg("l2")` | `SeededBinarySegmentation(CUSUM())` |
+| `moving_window_mv_gaussian` | `Window("normal")` | `MovingWindow(MultivariateGaussianScore())` |
+| `moving_window_rank` | `Window("rank")` | `MovingWindow(CostChangeScore(RankCost()))` |
+| `binseg_l2_cusum` | `Binseg("l2")` | `SeededBinarySegmentation(CUSUM())` |
 | `binseg_l1` | `Binseg("l1")` | `SeededBinarySegmentation(CostChangeScore(L1Cost()))` |
-| `binseg_gaussian` | `Binseg("normal")` | `SeededBinarySegmentation(MultivariateGaussianScore())` |
+| `binseg_mv_gaussian` | `Binseg("normal")` | `SeededBinarySegmentation(MultivariateGaussianScore())` |
+| `binseg_rank` | `Binseg("rank")` | `SeededBinarySegmentation(CostChangeScore(RankCost()))` |
 
-The running times of the following calls are recorded:
-- skchange: detector.fit(X).predict_changepoints(X)
-- ruptures: detector.fit_predict(X, pen=penalty), where penalty is set to the same value as the corresponding skchange detector's penalty parameter.
+Run `uv run bench --list` for the full, up-to-date list (including linear
+regression, linear trend, and ESAC pairs).
 
-Otherwise, parameters are set to make the algorithms as comparable as possible, e.g. minimum segment length, window sizes, jump sizes etc.
+## Supplementary benchmarks
 
-# TODO: Generere figurene og legge inn i README. 
-# + Hvordan generere data + figurene selv.
+### Robust change-in-mean (L1 cost)
 
-# TODO:
-Kovarians pre-compute: (X[rad-observasjoner, kolonne-variabler]).
-# cov(i, j) = sum(n = i)^j X[i, :]^T * X[i, :]
+Runtime for the L1 (robust) change-in-mean pairs across sample sizes:
 
-# Gjort:
-# Profilere "MvGaussian" for "p=5", lavere n <= 1000.
- - Hvor stor andel av vår tid brukes i Numba vs. Python.
+![Robust change-in-mean benchmark](figures/paper/robust-change-in-mean-benchmark.png)
 
-# Figur for utforskning:
-- Alle change-in-mean varianter: Med samme kostnad (L2).
-  - Får en felles oversikt, og kan sammenligne 
-    forskjellige algoritmer på samme skala. Er vår 
-    "moving window + L2" raskere enn deres "Pelt + L2". 
-    (per dimensjon, [1, 2, 5])
-  - Skille på farge [skchange, ruptures] og linjetype [alg.].
+![Robust change-in-mean benchmark, relative](figures/paper/robust-change-in-mean-benchmark-relative.png)
 
+Reproduce with `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py`
+followed by `scripts/paper_plotting/plot_l1_change_in_mean_benchmark.py`.
 
-- Figur for "multivariate change detection":
-  - N samples konstant (1000), øke p 
-    gjennom p (1, 5, 10, 50, 100, 500)
-  - Mv-kostnader:
-    - L2
-    - Esac (uten sammenligning)
-    - MvGaussian
-    - MvRank
-  - Søkealgoritmer:
-    - MovingWindow
-    - SeededBinary
-    - PELT
+### Multivariate change detection (dimension sweep)
 
+Runtime at a fixed number of samples with increasing data dimension, covering
+multivariate Gaussian, L2, rank, and ESAC-based detectors:
 
+![Multivariate dimension benchmark](figures/paper/mv-dimension-benchmark.png)
+
+![Multivariate dimension benchmark, relative](figures/paper/mv-dimension-benchmark-relative.png)
+
+Reproduce with `scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py`
+followed by `scripts/paper_plotting/plot_mv_dimension_benchmark.py`.

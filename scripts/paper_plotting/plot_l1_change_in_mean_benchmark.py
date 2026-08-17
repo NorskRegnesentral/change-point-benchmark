@@ -320,12 +320,17 @@ def main() -> None:
     fig_all = build_figure(df, dimensions)
     fig_all.write_html(OUTPUT_PATH)
     fig_all.write_image(OUTPUT_PATH_PDF)
+    # Stable-named PNG so README image links never go stale.
+    fig_all.write_image(FIGURES_DIR / "robust-change-in-mean-benchmark.png", scale=2)
     print(f"Figure written to {OUTPUT_PATH} and {OUTPUT_PATH_PDF}")
     # fig_all.show()
 
     relative_fig = build_relative_speed_figure(df, dimensions)
     relative_fig.write_html(RELATIVE_OUTPUT_PATH)
     relative_fig.write_image(RELATIVE_OUTPUT_PATH_PDF)
+    relative_fig.write_image(
+        FIGURES_DIR / "robust-change-in-mean-benchmark-relative.png", scale=2
+    )
     print(f"Figure written to {RELATIVE_OUTPUT_PATH} and {RELATIVE_OUTPUT_PATH_PDF}")
     # relative_fig.show()
 

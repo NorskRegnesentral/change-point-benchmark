@@ -179,3 +179,33 @@ def run_benchmark(
     result.n_detected_changepoints = len(changepoints)
 
     return result
+
+
+def print_penalty_summary(frame) -> None:
+    """Print penalty and detected-changepoint counts per benchmark case.
+
+    Benchmarks are run on null data with a penalty high enough that no
+    spurious change points should be detected; this summary lets users
+    confirm that ``n_detected_changepoints`` is zero everywhere.
+    """
+    import polars as pl
+
+    summary = frame.select(
+        "cpd_algorithm",
+        "package",
+        "n_samples",
+        "data_dimension",
+        "penalty",
+        "n_detected_changepoints",
+    ).sort("cpd_algorithm", "package", "data_dimension", "n_samples")
+    n_spurious = summary.filter(pl.col("n_detected_changepoints") > 0).height
+    print("\nPenalty summary (expected n_detected_changepoints = 0):")
+    with pl.Config(tbl_rows=-1):
+        print(summary)
+    if n_spurious:
+        print(
+            f"WARNING: {n_spurious} case(s) detected spurious change points; "
+            "consider raising the penalty."
+        )
+    else:
+        print("All cases detected 0 change points at the configured penalties.")
