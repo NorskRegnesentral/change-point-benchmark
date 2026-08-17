@@ -36,7 +36,9 @@ class TestNullDatasetConfigShape:
 
     @pytest.mark.parametrize("n_columns", [1, 3, 10])
     def test_n_columns(self, n_columns: int) -> None:
-        cfg = NullDatasetConfig(n_samples=50, distribution="normal", n_columns=n_columns)
+        cfg = NullDatasetConfig(
+            n_samples=50, distribution="normal", n_columns=n_columns
+        )
         data = cfg.generate(fresh_rng())
         assert data.shape == (50, n_columns)
 

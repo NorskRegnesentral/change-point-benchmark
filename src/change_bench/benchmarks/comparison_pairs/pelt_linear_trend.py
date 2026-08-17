@@ -44,5 +44,8 @@ def pair_pelt_linear_trend(
 ) -> list[BenchmarkCase]:
     """PELT with linear-trend cost — skchange vs ruptures."""
     return build_pair_cases(
-        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+        problems,
+        _CONFIG,
+        include_fit=include_fit,
+        min_segment_length=min_segment_length,
     )

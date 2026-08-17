@@ -21,7 +21,7 @@ from change_bench.benchmarks.comparison_pairs.binseg_mv_gaussian import (
     pair_binseg_mv_gaussian,
 )
 from change_bench.benchmarks.comparison_pairs.binseg_rank import pair_binseg_rank
-from change_bench.benchmarks.comparison_pairs.moving_window_continuous_linear_trend import (
+from change_bench.benchmarks.comparison_pairs.moving_window_continuous_linear_trend import (  # noqa: E501
     pair_moving_window_continuous_linear_trend,
 )
 from change_bench.benchmarks.comparison_pairs.moving_window_esac import (

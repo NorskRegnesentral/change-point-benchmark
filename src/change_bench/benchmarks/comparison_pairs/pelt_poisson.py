@@ -81,5 +81,8 @@ def pair_pelt_poisson(
 ) -> list[BenchmarkCase]:
     """PELT with Poisson cost — skchange vs ruptures (custom cost)."""
     return build_pair_cases(
-        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+        problems,
+        _CONFIG,
+        include_fit=include_fit,
+        min_segment_length=min_segment_length,
     )

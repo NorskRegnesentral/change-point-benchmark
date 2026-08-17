@@ -38,5 +38,8 @@ def pair_pelt_1d_gaussian(
 ) -> list[BenchmarkCase]:
     """PELT with Gaussian/normal cost — skchange vs ruptures."""
     return build_pair_cases(
-        problems, _CONFIG, include_fit=include_fit, min_segment_length=min_segment_length
+        problems,
+        _CONFIG,
+        include_fit=include_fit,
+        min_segment_length=min_segment_length,
     )

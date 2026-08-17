@@ -1,4 +1,4 @@
-# change-point-benchmark
+# Change Point Benchmark
 
 Benchmarks comparing the runtime performance of change-point detection packages,
 primarily [skchange](https://github.com/NorskRegnesentral/skchange) vs.
@@ -43,11 +43,22 @@ uv run bench --pairs pelt_l2 --n-samples 1000 5000 --runs 5 -o results/pelt_l2.p
 
 ## Reproducing the figures
 
-Each figure is produced by a benchmark script (writes Parquet to
-`results/paper/`) followed by a plotting script (writes HTML/PDF/PNG to
-`figures/paper/`), all run via `uv run python <script>`. The compact score
-figure reads its results from `results/paper/visualized_results/`, so move
-fresh result files there before re-plotting it:
+The full benchmark suite and all figures are reproduced with a single command:
+
+```bash
+./scripts/run_benchmarks.sh            # or --no-plots to skip figure generation
+```
+
+The benchmark scripts are resumable: completed cases found in the output
+Parquet file are skipped, so an interrupted run can simply be restarted.
+
+Each figure can also be produced individually by a benchmark script (writes
+Parquet to `results/paper/`) followed by a plotting script (writes
+HTML/PDF/PNG to `figures/paper/`), all run via `uv run python <script>`. The
+plotting scripts automatically pick up the latest matching result file. The
+compact score figure reads curated results from
+`results/paper/visualized_results/`, which `run_benchmarks.sh` refreshes
+automatically after a run:
 
 | Figure | Benchmark script(s) | Plotting script |
 |--------|---------------------|-----------------|
@@ -56,8 +67,6 @@ fresh result files there before re-plotting it:
 | Robust change-in-mean (L1) | `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py` | `scripts/paper_plotting/plot_l1_change_in_mean_benchmark.py` |
 | Multivariate dimension sweep | `scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py` | `scripts/paper_plotting/plot_mv_dimension_benchmark.py` |
 
-The benchmark scripts are resumable: completed cases found in the output
-Parquet file are skipped, so an interrupted run can simply be restarted.
 
 ## Methodology
 

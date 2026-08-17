@@ -23,6 +23,33 @@ def find_repo_root(start: Path | None = None) -> Path:
     )
 
 
+def latest_result_path(prefix: str, start: Path | None = None) -> Path:
+    """Return the newest ``{prefix}_*.parquet`` under ``results/paper``.
+
+    Both ``results/paper`` and ``results/paper/visualized_results`` are
+    searched; the date-stamped filenames make lexicographic order
+    chronological.
+    """
+    results_dir = find_repo_root(start) / "results" / "paper"
+    matches = sorted(
+        (
+            *results_dir.glob(f"{prefix}_*.parquet"),
+            *(results_dir / "visualized_results").glob(f"{prefix}_*.parquet"),
+        ),
+        key=lambda path: path.name,
+    )
+    if not matches:
+        raise FileNotFoundError(
+            f"No benchmark result matches {results_dir}/**/{prefix}_*.parquet"
+        )
+    return matches[-1]
+
+
+def result_date(path: Path) -> str:
+    """Extract the ``YYYY-MM-DD`` date token from a result filename."""
+    return path.stem.split("_")[1]
+
+
 def prepare_results_path(
     filename: str, start: Path | None = None, subdir: Path | None = None
 ) -> Path:

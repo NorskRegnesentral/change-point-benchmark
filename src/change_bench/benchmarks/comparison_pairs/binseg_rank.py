@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.detectors import SeededBinarySegmentation
-from skchange.interval_scorers import CostChangeScore, RankCost, RankScore
+from skchange.interval_scorers import CostChangeScore, RankCost
 
 from change_bench.benchmarks.comparison_pairs._common import (
     BenchmarkCase,
