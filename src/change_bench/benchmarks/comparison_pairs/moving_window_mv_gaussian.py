@@ -23,7 +23,7 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.problems.base import BenchmarkProblem
 
-JOINT_MW_MV_GAUSSIAN_PENALTY = 4.0
+JOINT_MW_MV_GAUSSIAN_PENALTY = 100.0
 
 
 def _make_sk_detector(msl: int):

@@ -215,10 +215,12 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
             setup=case.setup,
             func=case.func,
             n_runs=n_runs,
+            penalty=case.penalty,
         )
         print(
             f"ski_jump={result.ski_jump_mean:.4f}s "
-            f"+- {result.ski_jump_std:.4f}s  min={result.min:.4f}s"
+            f"+- {result.ski_jump_std:.4f}s  min={result.min:.4f}s "
+            f"changes={result.n_detected_changepoints}"
         )
         results.append(result.as_dict())
 
@@ -231,7 +233,9 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
         return
 
     if results and existing_frame is not None:
-        output_frame = pl.concat([existing_frame, pl.DataFrame(results)])
+        output_frame = pl.concat(
+            [existing_frame, pl.DataFrame(results)], how="diagonal_relaxed"
+        )
     elif existing_frame is not None:
         output_frame = existing_frame
     else:

@@ -16,7 +16,7 @@ def test_existing_pair_collects_both_packages():
     )
 
     assert {case.package for case in cases} == {"skchange", "ruptures"}
-    assert {case.penalty for case in cases} == {10.0}
+    assert {case.penalty for case in cases} == {100.0}
 
 
 @pytest.mark.parametrize(

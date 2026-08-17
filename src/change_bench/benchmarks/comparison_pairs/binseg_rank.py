@@ -13,7 +13,7 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.problems.base import BenchmarkProblem
 
-JOINT_BINSEG_RANK_PENALTY = 30.0
+JOINT_BINSEG_RANK_PENALTY = 100.0
 
 _CONFIG = PairConfig(
     pair_name="binseg_rank",
@@ -21,8 +21,7 @@ _CONFIG = PairConfig(
     sk_name_prefix="skchange_seeded_binseg_rank",
     rpt_name_prefix="ruptures_binseg_rank",
     make_sk_detector=lambda msl: SeededBinarySegmentation(
-        # change_score=RankScore(),
-        change_score=CostChangeScore(RankCost(), deduplicate=False),
+        change_score=CostChangeScore(RankCost(), deduplicate=True),
         penalty=JOINT_BINSEG_RANK_PENALTY,
     ),
     make_rpt_algo=lambda msl: rpt.Binseg(model="rank", min_size=msl, jump=1),

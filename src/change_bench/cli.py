@@ -29,7 +29,9 @@ from change_bench.runner import run_benchmark
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="bench",
-        description="Run change-point detection benchmarks and save results to Parquet.",
+        description=(
+            "Run change-point detection benchmarks and save results to Parquet."
+        ),
     )
     parser.add_argument(
         "-n",
@@ -191,11 +193,13 @@ def main(argv: list[str] | None = None) -> None:
             setup=case.setup,
             func=case.func,
             n_runs=args.runs,
+            penalty=case.penalty,
         )
 
         print(
             f"mean={res.mean:.4f}s  std={res.std:.4f}s  "
-            f"median={res.median:.4f}s  min={res.min:.4f}s"
+            f"median={res.median:.4f}s  min={res.min:.4f}s  "
+            f"changes={res.n_detected_changepoints}"
         )
         results.append(res.as_dict())
 

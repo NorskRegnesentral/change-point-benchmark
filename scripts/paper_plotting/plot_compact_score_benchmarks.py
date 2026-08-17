@@ -52,17 +52,17 @@ PANELS = [
             "binseg": "binseg_l2_cusum",
         },
     ),
-    PanelSpec(
-        key="rank",
-        title="RankCost / RankScore (p=10)",
-        result_prefix="rank-score-benchmark",
-        dimension=10,
-        algorithms={
-            "pelt": "pelt_rank",
-            "moving_window": "moving_window_rank",
-            "binseg": "binseg_rank",
-        },
-    ),
+    # PanelSpec(
+    #     key="rank",
+    #     title="RankCost / RankScore (p=10)",
+    #     result_prefix="rank-score-benchmark",
+    #     dimension=10,
+    #     algorithms={
+    #         "pelt": "pelt_rank",
+    #         "moving_window": "moving_window_rank",
+    #         "binseg": "binseg_rank",
+    #     },
+    # ),
     # PanelSpec(
     #     key="linear-trend",
     #     title="Continuous trend score (p=1)",
@@ -128,7 +128,12 @@ def build_absolute_figure(
                     (pl.col("cpd_algorithm") == algorithm)
                     & (pl.col("package") == package)
                 ).sort("n_samples")
-                legend_name = f"{package}: {search_label}"
+                package_search_label = (
+                    "Seeded Bin. Seg"
+                    if package == "skchange" and search == "binseg"
+                    else search_label
+                )
+                legend_name = f"{package}: {package_search_label}"
                 figure.add_trace(
                     go.Scatter(
                         x=line["n_samples"],

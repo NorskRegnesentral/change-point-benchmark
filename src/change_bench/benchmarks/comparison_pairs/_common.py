@@ -46,7 +46,7 @@ class BenchmarkCase:
 
 
 #: Penalty used for all PELT-based pairs (same for skchange and ruptures).
-PELT_PENALTY: float = 10.0
+PELT_PENALTY: float = 100.0
 
 #: Bandwidth for moving-window pairs.
 MW_BANDWIDTH: int = 25

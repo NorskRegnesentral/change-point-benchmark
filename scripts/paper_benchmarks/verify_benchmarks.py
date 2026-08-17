@@ -21,6 +21,7 @@ from types import ModuleType
 
 from change_bench.benchmark_verification import (
     VerificationResult,
+    calibrate_penalties,
     collect_benchmark_cases,
     verify_cases,
 )
@@ -69,6 +70,17 @@ def parse_args() -> argparse.Namespace:
         type=int,
         help="Only verify configured sample sizes at or below this value.",
     )
+    parser.add_argument(
+        "--calibrate",
+        action="store_true",
+        help="Find sufficient per-pair penalties over the selected configurations.",
+    )
+    parser.add_argument(
+        "--margin",
+        type=float,
+        default=1.5,
+        help="Multiplier applied to the first sufficient penalty (default: 1.5).",
+    )
     return parser.parse_args()
 
 
@@ -76,6 +88,24 @@ def main() -> int:
     """Run configured verifications and return a process exit code."""
     args = parse_args()
     selected = args.benchmark or list(BENCHMARK_FILES)
+    selected_cases = []
+    for benchmark in selected:
+        module = load_benchmark_module(BENCHMARK_FILES[benchmark])
+        selected_cases.extend(
+            collect_benchmark_cases(module, max_n_samples=args.max_n_samples)
+        )
+
+    if args.calibrate:
+        calibrations = calibrate_penalties(selected_cases, margin=args.margin)
+        for calibration in calibrations:
+            print(
+                f"{calibration.cpd_algorithm}: initial="
+                f"{calibration.initial_penalty:g}, sufficient="
+                f"{calibration.sufficient_penalty:g}, selected="
+                f"{calibration.selected_penalty:g}"
+            )
+        return 0
+
     total_results = 0
     total_skipped = 0
     mismatches = 0

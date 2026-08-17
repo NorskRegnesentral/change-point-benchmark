@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import ruptures as rpt
 from skchange.detectors import MovingWindow
-from skchange.interval_scorers import RankScore, RankCost, CostChangeScore
+from skchange.interval_scorers import RankCost, CostChangeScore
 
 from change_bench.benchmarks.comparison_pairs._common import (
     MW_BANDWIDTH,
@@ -19,13 +19,12 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.problems.base import BenchmarkProblem
 
-JOINT_MW_RANK_PENALTY = 20.0
+JOINT_MW_RANK_PENALTY = 100.0
 
 
 def _make_sk_detector(msl: int):
     return MovingWindow(
-        # change_score=RankScore(),
-        change_score=CostChangeScore(RankCost(), deduplicate=False),
+        change_score=CostChangeScore(RankCost(), deduplicate=True),
         penalty=JOINT_MW_RANK_PENALTY,
         bandwidth=MW_BANDWIDTH,
     )

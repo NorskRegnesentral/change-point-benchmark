@@ -257,11 +257,12 @@ def _run_job(job: Job, job_idx: int, total_jobs: int) -> None:
             setup=case.setup,
             func=case.func,
             n_runs=n_runs,
+            penalty=case.penalty,
         )
 
         print(
             f"ski_jump={res.ski_jump_mean:.4f}s ± {res.ski_jump_std:.4f}s  "
-            f"min={res.min:.4f}s"
+            f"min={res.min:.4f}s changes={res.n_detected_changepoints}"
         )
         results.append(res.as_dict())
 
@@ -276,7 +277,9 @@ def _run_job(job: Job, job_idx: int, total_jobs: int) -> None:
 
     # Merge new results with existing ones.
     if results and existing_df is not None:
-        df = pl.concat([existing_df, pl.DataFrame(results)])
+        df = pl.concat(
+            [existing_df, pl.DataFrame(results)], how="diagonal_relaxed"
+        )
     elif existing_df is not None:
         df = existing_df
     else:

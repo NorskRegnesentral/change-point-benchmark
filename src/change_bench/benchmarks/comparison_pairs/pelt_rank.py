@@ -17,7 +17,7 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.problems.base import BenchmarkProblem
 
-JOINT_PELT_RANK_PENALTY = 20.0
+JOINT_PELT_RANK_PENALTY = 100.0
 
 _CONFIG = PairConfig(
     pair_name="pelt_rank",

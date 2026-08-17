@@ -74,6 +74,7 @@ _CASE_KEY_COLS = [
     "include_fit",
     "min_segment_length",
     "n_runs",
+    "penalty",
 ]
 
 
@@ -95,12 +96,15 @@ def _case_key(case: BenchmarkCase, n_runs: int) -> tuple:
         case.include_fit,
         case.min_segment_length,
         n_runs,
+        case.penalty,
     )
 
 
 def _load_existing_keys(path: Path) -> set[tuple]:
     """Load completed case keys from an existing result file."""
     if not path.exists():
+        return set()
+    if "penalty" not in pl.read_parquet_schema(path):
         return set()
     frame = pl.read_parquet(path, columns=_CASE_KEY_COLS)
     return set(frame.iter_rows())
@@ -122,10 +126,14 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
     """Run incomplete cases and merge their results with existing output."""
     existing_keys: set[tuple] = set()
     existing_frame: pl.DataFrame | None = None
-    if not OVERRIDE_RESULTS:
-        existing_keys = _load_existing_keys(OUTPUT_PATH)
-        if existing_keys:
-            existing_frame = pl.read_parquet(OUTPUT_PATH)
+    if not OVERRIDE_RESULTS and OUTPUT_PATH.exists():
+        existing_frame = pl.read_parquet(OUTPUT_PATH)
+        if "penalty" in existing_frame.columns:
+            penalties = list({case.penalty for case in cases})
+            existing_frame = existing_frame.filter(pl.col("penalty").is_in(penalties))
+            existing_keys = set(existing_frame.select(_CASE_KEY_COLS).iter_rows())
+        else:
+            existing_frame = None
 
     results: list[dict] = []
     skipped = 0
@@ -159,10 +167,12 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
             setup=case.setup,
             func=case.func,
             n_runs=n_runs,
+            penalty=case.penalty,
         )
         print(
             f"ski_jump={result.ski_jump_mean:.4f}s "
-            f"+- {result.ski_jump_std:.4f}s  min={result.min:.4f}s"
+            f"+- {result.ski_jump_std:.4f}s  min={result.min:.4f}s "
+            f"changes={result.n_detected_changepoints}"
         )
         results.append(result.as_dict())
 
@@ -175,7 +185,9 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
         return
 
     if results and existing_frame is not None:
-        output_frame = pl.concat([existing_frame, pl.DataFrame(results)])
+        output_frame = pl.concat(
+            [existing_frame, pl.DataFrame(results)], how="diagonal_relaxed"
+        )
     elif existing_frame is not None:
         output_frame = existing_frame
     else:

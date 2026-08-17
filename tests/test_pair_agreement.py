@@ -37,26 +37,11 @@ from skchange.interval_scorers import (
     RankScore,
 )
 
-from change_bench.benchmarks.comparison_pairs._common import MW_BANDWIDTH, PELT_PENALTY
+from change_bench.benchmarks.comparison_pairs._common import MW_BANDWIDTH
 from change_bench.benchmarks.comparison_pairs.binseg_mv_gaussian import (
     pair_binseg_mv_gaussian,
 )
-from change_bench.benchmarks.comparison_pairs.binseg_continuous_linear_trend import (
-    JOINT_BINSEG_CONTINUOUS_LINEAR_TREND_PENALTY,
-)
-from change_bench.benchmarks.comparison_pairs.binseg_rank import (
-    JOINT_BINSEG_RANK_PENALTY,
-)
-from change_bench.benchmarks.comparison_pairs.moving_window_continuous_linear_trend import (
-    JOINT_MW_CONTINUOUS_LINEAR_TREND_PENALTY,
-)
-from change_bench.benchmarks.comparison_pairs.moving_window_rank import (
-    JOINT_MW_RANK_PENALTY,
-)
 from change_bench.benchmarks.comparison_pairs.pelt_poisson import CostPoisson
-from change_bench.benchmarks.comparison_pairs.pelt_rank import (
-    JOINT_PELT_RANK_PENALTY,
-)
 from change_bench.datasets.change_case import ChangeDatasetConfig, SegmentParams
 from change_bench.problems.base import make_null_problems
 
@@ -64,8 +49,13 @@ from change_bench.problems.base import make_null_problems
 # Shared test fixtures and helpers
 # ---------------------------------------------------------------------------
 
-#: Penalty used for all tests (same as benchmark runs for PELT pairs).
-TEST_PENALTY: float = PELT_PENALTY
+#: Penalties for synthetic detection tests, independent of null benchmarks.
+TEST_PENALTY: float = 10.0
+TEST_PELT_RANK_PENALTY: float = 20.0
+TEST_MW_RANK_PENALTY: float = 20.0
+TEST_BINSEG_RANK_PENALTY: float = 30.0
+TEST_MW_CONTINUOUS_LINEAR_TREND_PENALTY: float = 6.0
+TEST_BINSEG_CONTINUOUS_LINEAR_TREND_PENALTY: float = 15.0
 
 #: Penalty for MovingWindow / BinSeg tests.
 #: Must be tuned so that strong mean shifts (5× scale) are detected.
@@ -357,7 +347,7 @@ class TestPeltRankAgreement:
         # skchange — RankCost requires min_segment_length >= 2
         sk_det = SkchangePELT(
             cost=RankCost(),
-            penalty=JOINT_PELT_RANK_PENALTY,
+            penalty=TEST_PELT_RANK_PENALTY,
             min_segment_length=2,
         )
         sk_det.fit(data)
@@ -368,7 +358,7 @@ class TestPeltRankAgreement:
         rpt_algo.fit(data)
         rpt_cps = sorted(
             _strip_endpoint(
-                rpt_algo.predict(pen=JOINT_PELT_RANK_PENALTY), len(data)
+                rpt_algo.predict(pen=TEST_PELT_RANK_PENALTY), len(data)
             )
         )
 
@@ -390,7 +380,7 @@ class TestPeltRankAgreement:
 
         sk_det = SkchangePELT(
             cost=RankCost(),
-            penalty=JOINT_PELT_RANK_PENALTY,
+            penalty=TEST_PELT_RANK_PENALTY,
             min_segment_length=2,
         )
         sk_det.fit(data)
@@ -533,7 +523,7 @@ class TestMovingWindowRankAgreement:
         # skchange
         sk_det = MovingWindow(
             change_score=RankScore(),
-            penalty=JOINT_MW_RANK_PENALTY,
+            penalty=TEST_MW_RANK_PENALTY,
             bandwidth=bw,
         )
         sk_det.fit(data)
@@ -543,7 +533,7 @@ class TestMovingWindowRankAgreement:
         rpt_algo = rpt.Window(model="rank", width=2 * bw, min_size=1, jump=1)
         rpt_algo.fit(data)
         rpt_cps = sorted(
-            _strip_endpoint(rpt_algo.predict(pen=JOINT_MW_RANK_PENALTY), len(data))
+            _strip_endpoint(rpt_algo.predict(pen=TEST_MW_RANK_PENALTY), len(data))
         )
 
         _assert_changepoints_close(
@@ -739,13 +729,13 @@ class TestBinSegRankAgreement:
 
         sk_detector = SeededBinarySegmentation(
             change_score=RankScore(),
-            penalty=JOINT_BINSEG_RANK_PENALTY,
+            penalty=TEST_BINSEG_RANK_PENALTY,
         )
         sk_changepoints = sk_detector.fit_predict(data).tolist()
 
         rpt_algorithm = rpt.Binseg(model="rank", min_size=2, jump=1).fit(data)
         rpt_changepoints = _strip_endpoint(
-            rpt_algorithm.predict(pen=JOINT_BINSEG_RANK_PENALTY), len(data)
+            rpt_algorithm.predict(pen=TEST_BINSEG_RANK_PENALTY), len(data)
         )
 
         assert any(abs(changepoint - 150) <= 5 for changepoint in sk_changepoints)
@@ -768,7 +758,7 @@ class TestContinuousLinearTrendAgreement:
         )[:, None]
 
         if search == "moving_window":
-            penalty = JOINT_MW_CONTINUOUS_LINEAR_TREND_PENALTY
+            penalty = TEST_MW_CONTINUOUS_LINEAR_TREND_PENALTY
             sk_detector = MovingWindow(
                 change_score=ContinuousLinearTrendScore(),
                 penalty=penalty,
@@ -781,7 +771,7 @@ class TestContinuousLinearTrendAgreement:
                 jump=1,
             )
         else:
-            penalty = JOINT_BINSEG_CONTINUOUS_LINEAR_TREND_PENALTY
+            penalty = TEST_BINSEG_CONTINUOUS_LINEAR_TREND_PENALTY
             sk_detector = SeededBinarySegmentation(
                 change_score=ContinuousLinearTrendScore(),
                 penalty=penalty,

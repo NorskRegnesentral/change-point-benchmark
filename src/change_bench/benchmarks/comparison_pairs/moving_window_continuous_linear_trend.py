@@ -14,7 +14,7 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.problems.base import BenchmarkProblem
 
-JOINT_MW_CONTINUOUS_LINEAR_TREND_PENALTY = 6.0
+JOINT_MW_CONTINUOUS_LINEAR_TREND_PENALTY = 100.0
 
 _CONFIG = PairConfig(
     pair_name="moving_window_continuous_linear_trend",

@@ -13,7 +13,7 @@ from change_bench.benchmarks.comparison_pairs._common import (
 )
 from change_bench.problems.base import BenchmarkProblem
 
-JOINT_BINSEG_CONTINUOUS_LINEAR_TREND_PENALTY = 15.0
+JOINT_BINSEG_CONTINUOUS_LINEAR_TREND_PENALTY = 100.0
 
 _CONFIG = PairConfig(
     pair_name="binseg_continuous_linear_trend",

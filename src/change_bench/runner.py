@@ -27,6 +27,8 @@ class BenchmarkResult:
     include_fit: bool
     min_segment_length: int
     n_runs: int
+    penalty: float | None
+    n_detected_changepoints: int = 0
     times: list[float] = field(default_factory=list)
 
     @property
@@ -72,6 +74,8 @@ class BenchmarkResult:
             "include_fit": self.include_fit,
             "min_segment_length": self.min_segment_length,
             "n_runs": self.n_runs,
+            "penalty": self.penalty,
+            "n_detected_changepoints": self.n_detected_changepoints,
             "mean_s": self.mean,
             "std_s": self.std,
             "median_s": self.median,
@@ -95,6 +99,7 @@ def run_benchmark(
     setup: Callable,
     func: Callable,
     n_runs: int,
+    penalty: float | None,
 ) -> BenchmarkResult:
     """Run a single benchmark case *n_runs* times and return statistics.
 
@@ -103,7 +108,9 @@ def run_benchmark(
     2. ``setup(data)`` creates a fresh detector per run.
     3. ``func(*args, **kwargs)`` is timed.
 
-    After all runs complete the data array goes out of scope.
+    After timing, one fresh detector is run once without timing to record the
+    number of detected changepoints. The terminal endpoint returned by ruptures
+    is not counted as a changepoint.
 
     Parameters
     ----------
@@ -133,6 +140,8 @@ def run_benchmark(
         The function to time.  Called as ``func(*args, **kwargs)``.
     n_runs:
         Number of timed repetitions.
+    penalty:
+        Penalty configured for the benchmark comparison.
     """
     result = BenchmarkResult(
         package=package,
@@ -144,6 +153,7 @@ def run_benchmark(
         include_fit=include_fit,
         min_segment_length=min_segment_length,
         n_runs=n_runs,
+        penalty=penalty,
     )
 
     data = prepare()
@@ -158,5 +168,14 @@ def run_benchmark(
         if gc_was_enabled:
             gc.enable()
         result.times.append(elapsed)
+
+    args, kwargs = setup(data)
+    prediction = func(*args, **kwargs)
+    changepoints = list(prediction)
+    if package == "ruptures":
+        changepoints = [
+            changepoint for changepoint in changepoints if changepoint != n_samples
+        ]
+    result.n_detected_changepoints = len(changepoints)
 
     return result
