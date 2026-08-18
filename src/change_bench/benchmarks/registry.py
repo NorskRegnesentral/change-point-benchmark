@@ -24,6 +24,7 @@ from change_bench.benchmarks.comparison_pairs import (
     pair_binseg_linreg,
     pair_binseg_mv_gaussian,
     pair_binseg_rank,
+    pair_fpop_l2,
     pair_moving_window_esac,
     pair_moving_window_continuous_linear_trend,
     pair_moving_window_l1,
@@ -50,6 +51,7 @@ class Pair(StrEnum):
     """Available comparison pairs."""
 
     PELT_L2 = "pelt_l2"
+    FPOP_L2 = "fpop_l2"
     PELT_L1 = "pelt_l1"
     PELT_1D_GAUSSIAN = "pelt_1d_gaussian"
     PELT_POISSON = "pelt_poisson"
@@ -106,6 +108,7 @@ def _make_problems(
 # ---------------------------------------------------------------------------
 BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
     Pair.PELT_L2: pair_pelt_l2,
+    Pair.FPOP_L2: pair_fpop_l2,
     Pair.PELT_L1: pair_pelt_l1,
     Pair.PELT_1D_GAUSSIAN: pair_pelt_1d_gaussian,
     Pair.PELT_POISSON: pair_pelt_poisson,
@@ -134,6 +137,7 @@ BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
 #: Pairs in this set will only receive univariate (p=1) problems.
 NON_MULTIVARIATE_PAIRS: set[Pair] = {
     Pair.PELT_1D_GAUSSIAN,
+    Pair.FPOP_L2,
     Pair.BINSEG_CONTINUOUS_LINEAR_TREND,
     Pair.MOVING_WINDOW_CONTINUOUS_LINEAR_TREND,
 }
@@ -154,6 +158,7 @@ MULTIVARIATE_ONLY_PAIRS: set[Pair] = {
 PAIR_CATEGORIES: dict[str, list[Pair]] = {
     "mean_change": [
         Pair.PELT_L2,
+        Pair.FPOP_L2,
         Pair.PELT_L1,
         Pair.PELT_POISSON,
         Pair.MOVING_WINDOW_L2,

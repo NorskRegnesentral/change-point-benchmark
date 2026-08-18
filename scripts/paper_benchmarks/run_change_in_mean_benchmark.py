@@ -33,6 +33,7 @@ from change_bench.runner import print_penalty_summary, run_benchmark
 # ============================================================================
 PAIRS: list[Pair] = [
     Pair.PELT_L2,
+    Pair.FPOP_L2,
     Pair.MOVING_WINDOW_L2,
     Pair.BINSEG_L2_CUSUM,
 ]

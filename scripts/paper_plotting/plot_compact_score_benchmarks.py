@@ -16,12 +16,16 @@ from change_bench.paths import find_repo_root
 from change_bench.plotting import relative_speed_frame
 
 PROJECT_DIR = find_repo_root(Path(__file__))
-RESULTS_DIR = PROJECT_DIR / "results" / "paper" / "visualized_results"
+# RESULTS_DIR = PROJECT_DIR / "results" / "paper" / "visualized_results"
+RESULTS_DIR = PROJECT_DIR / "results" / "paper"
 FIGURES_DIR = PROJECT_DIR / "figures" / "paper" / "compact"
 FIGURE_DATE = date.today().isoformat()
 SKCHANGE_VERSION = version("skchange")
 RUPTURES_VERSION = version("ruptures")
 METRIC_COL = "ski_jump_mean_s"
+
+# Set to False to drop the "Skchange: PELT" line from the absolute figure.
+SHOW_SKCHANGE_PELT: bool = True
 
 PACKAGE_COLORS = {"skchange": "#1f77b4", "ruptures": "#ff7f0e"}
 PACKAGE_LABELS = {"skchange": "Skchange", "ruptures": "Ruptures"}
@@ -33,9 +37,13 @@ PACKAGE_SEARCH_LABELS = {
 }
 SEARCH_STYLES = {
     "pelt": ("solid", "circle", "#2ca02c", "PELT"),
+    "fpop": ("dashdot", "triangle-up", "#d62728", "FPOP"),
     "moving_window": ("dash", "square-open", "#9467bd", "Moving window"),
     "binseg": ("dot", "diamond", "#8c564b", "Binary segmentation"),
 }
+# The triangle renders visually smaller than other symbols at equal size.
+MARKER_SIZES = {"fpop": 9}
+DEFAULT_MARKER_SIZE = 6
 
 
 @dataclass(frozen=True)
@@ -55,6 +63,7 @@ PANELS = [
         dimension=1,
         algorithms={
             "pelt": "pelt_l2",
+            "fpop": "fpop_l2",
             "moving_window": "moving_window_l2",
             "binseg": "binseg_l2_cusum",
         },
@@ -131,10 +140,16 @@ def build_absolute_figure(
         for search, algorithm in panel.algorithms.items():
             dash, symbol, _, search_label = SEARCH_STYLES[search]
             for package, color in PACKAGE_COLORS.items():
+                skchange_pelt = package == "skchange" and search == "pelt"
+                if skchange_pelt and not SHOW_SKCHANGE_PELT:
+                    continue
                 line = frame.filter(
                     (pl.col("cpd_algorithm") == algorithm)
                     & (pl.col("package") == package)
                 ).sort("n_samples")
+                if line.is_empty():
+                    # Skchange-only algorithms (e.g. FPOP) have no ruptures rows.
+                    continue
                 package_search_label = PACKAGE_SEARCH_LABELS.get(
                     (package, search), search_label
                 )
@@ -148,7 +163,11 @@ def build_absolute_figure(
                         legendgroup=legend_name,
                         showlegend=legend_name not in shown,
                         line=dict(color=color, dash=dash, width=1.8),
-                        marker=dict(color=color, symbol=symbol, size=6),
+                        marker=dict(
+                            color=color,
+                            symbol=symbol,
+                            size=MARKER_SIZES.get(search, DEFAULT_MARKER_SIZE),
+                        ),
                         hovertemplate=(
                             f"{legend_name}<br>Number of samples=%{{x}}"
                             "<br>Wall time=%{y:.3g} s"
@@ -190,6 +209,9 @@ def build_relative_figure(
         for search, algorithm in panel.algorithms.items():
             dash, symbol, color, search_label = SEARCH_STYLES[search]
             line = ratios.filter(pl.col("cpd_algorithm") == algorithm).sort("n_samples")
+            if line.is_empty():
+                # Skchange-only algorithms (e.g. FPOP) have no ruptures ratio.
+                continue
             figure.add_trace(
                 go.Scatter(
                     x=line["n_samples"],
@@ -199,7 +221,11 @@ def build_relative_figure(
                     legendgroup=search,
                     showlegend=search not in shown,
                     line=dict(color=color, dash=dash, width=1.8),
-                    marker=dict(color=color, symbol=symbol, size=6),
+                    marker=dict(
+                        color=color,
+                        symbol=symbol,
+                        size=MARKER_SIZES.get(search, DEFAULT_MARKER_SIZE),
+                    ),
                     hovertemplate=(
                         f"{search_label}<br>n=%{{x}}<br>Ruptures/Skchange=%{{y:.2f}}x"
                         "<extra></extra>"
@@ -234,7 +260,8 @@ def _apply_compact_layout(figure: go.Figure, n_panels: int) -> None:
             xanchor="center",
             y=-0.25,
             yanchor="top",
-            font=dict(size=11),
+            font=dict(size=10),
+            itemwidth=30,
         ),
     )
     figure.update_annotations(font=dict(size=11))

@@ -21,6 +21,7 @@ from change_bench.benchmarks.comparison_pairs.binseg_mv_gaussian import (
     pair_binseg_mv_gaussian,
 )
 from change_bench.benchmarks.comparison_pairs.binseg_rank import pair_binseg_rank
+from change_bench.benchmarks.comparison_pairs.fpop_l2 import pair_fpop_l2
 from change_bench.benchmarks.comparison_pairs.moving_window_continuous_linear_trend import (  # noqa: E501
     pair_moving_window_continuous_linear_trend,
 )
@@ -72,6 +73,7 @@ __all__ = [
     "pair_binseg_l2_cusum",
     "pair_binseg_mv_gaussian",
     "pair_binseg_rank",
+    "pair_fpop_l2",
     "pair_moving_window_esac",
     "pair_moving_window_continuous_linear_trend",
     "pair_moving_window_l1",
