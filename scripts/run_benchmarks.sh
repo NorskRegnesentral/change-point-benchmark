@@ -20,6 +20,7 @@ RUN_PLOTS=1
 BENCHMARKS=(
     scripts/paper_benchmarks/run_change_in_mean_benchmark.py
     scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py
+    scripts/paper_benchmarks/run_poisson_benchmark.py
     scripts/paper_benchmarks/run_multivariate_cost_benchmark.py
     scripts/paper_benchmarks/run_rank_score_benchmark.py
 )

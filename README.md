@@ -9,7 +9,7 @@ primarily [skchange](https://github.com/NorskRegnesentral/skchange) vs.
 > below in [results/paper/visualized_results/](results/paper/visualized_results/).
 > All generated figures (HTML, PDF, PNG) are in [figures/paper/](figures/paper/).
 
-## Headline results
+## Headline results: L2Cost and RankCost
 
 Wall time of full change-point detection (fit + predict) on null data, for a
 univariate change-in-mean setup (`L2Cost`, 1 feature) and a multivariate
@@ -41,6 +41,21 @@ squared-error cost could overreact to spikes. Benchmarked on one feature:
 ![L1 cost benchmark](figures/paper/cost/l1-change-in-mean/cost-l1-change-in-mean.png)
 
 Reproduce with `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py`
+followed by `scripts/paper_plotting/plot_cost_benchmark_figures.py`.
+
+### Poisson cost
+
+`PoissonCost` is the Poisson log-likelihood cost with a segment-wise rate,
+targeting changes in the intensity of count data such as event, arrival, or
+defect counts. Ruptures has no built-in Poisson model, so we've implemented a
+custom ruptures `PoissonCost()` equivalent (a `BaseCost` subclass computing
+the same twice-negative log-likelihood) for its side of the comparison —
+showcasing how easily both libraries extend to new costs. Benchmarked on one
+feature:
+
+![Poisson cost benchmark](figures/paper/cost/poisson/cost-poisson.png)
+
+Reproduce with `scripts/paper_benchmarks/run_poisson_benchmark.py`
 followed by `scripts/paper_plotting/plot_cost_benchmark_figures.py`.
 
 ### Rank cost
@@ -106,7 +121,7 @@ automatically after a run:
 | Compact score comparison (above) | `scripts/paper_benchmarks/run_change_in_mean_benchmark.py`, `scripts/paper_benchmarks/run_rank_score_benchmark.py` | `scripts/paper_plotting/plot_compact_score_benchmarks.py` |
 | Change-in-mean (L2) | `scripts/paper_benchmarks/run_change_in_mean_benchmark.py` | `scripts/paper_plotting/plot_change_in_mean_benchmark.py` |
 | Robust change-in-mean (L1) | `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py` | `scripts/paper_plotting/plot_l1_change_in_mean_benchmark.py` |
-| Per-cost comparisons (L1, Rank, MV Gaussian) | `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py`, `scripts/paper_benchmarks/run_multivariate_cost_benchmark.py` | `scripts/paper_plotting/plot_cost_benchmark_figures.py` |
+| Per-cost comparisons (L1, Poisson, Rank, MV Gaussian) | `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py`, `scripts/paper_benchmarks/run_poisson_benchmark.py`, `scripts/paper_benchmarks/run_multivariate_cost_benchmark.py` | `scripts/paper_plotting/plot_cost_benchmark_figures.py` |
 
 
 ## Methodology
@@ -146,10 +161,12 @@ so users can confirm that all timings correspond to zero detections.
 | `moving_window_l2` | `Window("l2")` | `MovingWindow(CUSUM())` |
 | `moving_window_l1` | `Window("l1")` | `MovingWindow(CostChangeScore(L1Cost()))` |
 | `moving_window_mv_gaussian` | `Window("normal")` | `MovingWindow(MultivariateGaussianScore())` |
+| `moving_window_poisson` | custom `BaseCost` | `MovingWindow(CostChangeScore(PoissonCost()))` |
 | `moving_window_rank` | `Window("rank")` | `MovingWindow(CostChangeScore(RankCost()))` |
 | `binseg_l2_cusum` | `Binseg("l2")` | `SeededBinarySegmentation(CUSUM())` |
 | `binseg_l1` | `Binseg("l1")` | `SeededBinarySegmentation(CostChangeScore(L1Cost()))` |
 | `binseg_mv_gaussian` | `Binseg("normal")` | `SeededBinarySegmentation(MultivariateGaussianScore())` |
+| `binseg_poisson` | custom `BaseCost` | `SeededBinarySegmentation(CostChangeScore(PoissonCost()))` |
 | `binseg_rank` | `Binseg("rank")` | `SeededBinarySegmentation(CostChangeScore(RankCost()))` |
 
 Run `uv run bench --list` for the full, up-to-date list (including linear

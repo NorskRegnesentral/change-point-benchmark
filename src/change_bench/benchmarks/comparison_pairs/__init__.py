@@ -20,6 +20,9 @@ from change_bench.benchmarks.comparison_pairs.binseg_linreg import pair_binseg_l
 from change_bench.benchmarks.comparison_pairs.binseg_mv_gaussian import (
     pair_binseg_mv_gaussian,
 )
+from change_bench.benchmarks.comparison_pairs.binseg_poisson import (
+    pair_binseg_poisson,
+)
 from change_bench.benchmarks.comparison_pairs.binseg_rank import pair_binseg_rank
 from change_bench.benchmarks.comparison_pairs.fpop_l2 import pair_fpop_l2
 from change_bench.benchmarks.comparison_pairs.moving_window_continuous_linear_trend import (  # noqa: E501
@@ -39,6 +42,9 @@ from change_bench.benchmarks.comparison_pairs.moving_window_linreg import (
 )
 from change_bench.benchmarks.comparison_pairs.moving_window_mv_gaussian import (
     pair_moving_window_mv_gaussian,
+)
+from change_bench.benchmarks.comparison_pairs.moving_window_poisson import (
+    pair_moving_window_poisson,
 )
 from change_bench.benchmarks.comparison_pairs.moving_window_rank import (
     pair_moving_window_rank,
@@ -72,6 +78,7 @@ __all__ = [
     "pair_binseg_linreg",
     "pair_binseg_l2_cusum",
     "pair_binseg_mv_gaussian",
+    "pair_binseg_poisson",
     "pair_binseg_rank",
     "pair_fpop_l2",
     "pair_moving_window_esac",
@@ -80,6 +87,7 @@ __all__ = [
     "pair_moving_window_linreg",
     "pair_moving_window_l2",
     "pair_moving_window_mv_gaussian",
+    "pair_moving_window_poisson",
     "pair_moving_window_rank",
     "pair_pelt_1d_gaussian",
     "pair_pelt_l1",

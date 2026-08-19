@@ -40,6 +40,17 @@ PANELS = [
         },
     ),
     PanelSpec(
+        key="poisson",
+        title="PoissonCost, 1 feature",
+        result_prefix="poisson-benchmark",
+        dimension=1,
+        algorithms={
+            "pelt": "pelt_poisson",
+            "moving_window": "moving_window_poisson",
+            "binseg": "binseg_poisson",
+        },
+    ),
+    PanelSpec(
         key="rank-high-dim",
         title="RankCost, 20 features",
         result_prefix="multivariate-cost-benchmark",

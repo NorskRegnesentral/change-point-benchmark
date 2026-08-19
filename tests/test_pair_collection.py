@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from change_bench.benchmarks.comparison_pairs._common import PairConfig
+from change_bench.benchmarks.comparison_pairs._common import PELT_PENALTY, PairConfig
 from change_bench.benchmarks.registry import Pair, collect_cases
 
 
@@ -16,7 +16,7 @@ def test_existing_pair_collects_both_packages():
     )
 
     assert {case.package for case in cases} == {"skchange", "ruptures"}
-    assert {case.penalty for case in cases} == {100.0}
+    assert {case.penalty for case in cases} == {PELT_PENALTY}
 
 
 @pytest.mark.parametrize(

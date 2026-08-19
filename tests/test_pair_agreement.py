@@ -17,6 +17,9 @@ import pytest
 import ruptures as rpt
 from ruptures.costs import CostLinear
 from skchange.detectors import (
+    FPOP as SkchangeFPOP,
+)
+from skchange.detectors import (
     PELT as SkchangePELT,
 )
 from skchange.detectors import (
@@ -103,6 +106,28 @@ def _make_linear_regression_change_data(rng: np.random.Generator) -> np.ndarray:
     slopes = np.repeat([1.0, 4.0, -2.0], 100)
     response = slopes * predictor + rng.normal(scale=0.2, size=300)
     return np.column_stack([response, predictor])
+
+
+#: Change points used by _make_poisson_data.
+POISSON_CHANGEPOINTS: list[int] = [100, 200]
+
+
+def _make_poisson_data(rng: np.random.Generator) -> np.ndarray:
+    """Generate non-negative data with different rates per segment."""
+    cfg = ChangeDatasetConfig(
+        n_samples=300,
+        changepoints=POISSON_CHANGEPOINTS,
+        segments=[
+            SegmentParams(loc=1.0, scale=0.5),
+            SegmentParams(loc=10.0, scale=0.5),
+            SegmentParams(loc=1.0, scale=0.5),
+        ],
+        distribution="exponential",
+        n_columns=1,
+    )
+    # Exponential with loc shift: generate then ensure positive
+    data = cfg.generate(rng)
+    return np.abs(data) + 0.01
 
 
 def _assert_changepoints_close(
@@ -275,30 +300,9 @@ class TestPelt1dGaussianAgreement:
 class TestPeltPoissonAgreement:
     """PELT + Poisson cost: skchange vs ruptures Pelt(custom_cost=CostPoisson())."""
 
-    #: Change points used by _make_poisson_data.
-    CHANGEPOINTS = [100, 200]
-
-    @staticmethod
-    def _make_poisson_data(rng: np.random.Generator) -> np.ndarray:
-        """Generate non-negative data with different rates per segment."""
-        cfg = ChangeDatasetConfig(
-            n_samples=300,
-            changepoints=TestPeltPoissonAgreement.CHANGEPOINTS,
-            segments=[
-                SegmentParams(loc=1.0, scale=0.5),
-                SegmentParams(loc=10.0, scale=0.5),
-                SegmentParams(loc=1.0, scale=0.5),
-            ],
-            distribution="exponential",
-            n_columns=1,
-        )
-        # Exponential with loc shift: generate then ensure positive
-        data = cfg.generate(rng)
-        return np.abs(data) + 0.01
-
     def test_same_changepoints(self):
         rng = np.random.default_rng(42)
-        data = self._make_poisson_data(rng)
+        data = _make_poisson_data(rng)
 
         # skchange
         sk_det = SkchangePELT(
@@ -318,7 +322,7 @@ class TestPeltPoissonAgreement:
 
     def test_detects_known_changepoints(self):
         rng = np.random.default_rng(42)
-        data = self._make_poisson_data(rng)
+        data = _make_poisson_data(rng)
 
         sk_det = SkchangePELT(
             cost=PoissonCost(), penalty=TEST_PENALTY, min_segment_length=1
@@ -326,7 +330,35 @@ class TestPeltPoissonAgreement:
         sk_det.fit(data)
         sk_cps = sorted(sk_det.predict(data).tolist())
 
-        _assert_changepoints_close(sk_cps, self.CHANGEPOINTS, tolerance=5)
+        _assert_changepoints_close(sk_cps, POISSON_CHANGEPOINTS, tolerance=5)
+
+
+class TestFpopL2Agreement:
+    """FPOP (skchange-only) solves the same objective as PELT + L2 exactly."""
+
+    def test_same_changepoints_as_pelt_l2(self):
+        rng = np.random.default_rng(42)
+        changepoints = [100, 200]
+        data = _make_normal_change_data(
+            rng,
+            n_samples=300,
+            changepoints=changepoints,
+            means=[0.0, 5.0, 0.0],
+            n_columns=1,
+        )
+
+        fpop_det = SkchangeFPOP(penalty=TEST_PENALTY).fit(data)
+        fpop_cps = sorted(fpop_det.predict(data).tolist())
+
+        pelt_det = SkchangePELT(
+            cost=L2Cost(), penalty=TEST_PENALTY, min_segment_length=1
+        ).fit(data)
+        pelt_cps = sorted(pelt_det.predict(data).tolist())
+
+        assert fpop_cps == pelt_cps, (
+            f"FPOP L2 disagreement: fpop={fpop_cps}, pelt={pelt_cps}"
+        )
+        _assert_changepoints_close(fpop_cps, changepoints, tolerance=5)
 
 
 class TestPeltRankAgreement:
@@ -550,6 +582,44 @@ class TestMovingWindowRankAgreement:
         )
 
 
+class TestMovingWindowPoissonAgreement:
+    """MovingWindow + Poisson cost: skchange vs ruptures Window(custom_cost)."""
+
+    def test_both_find_known_changepoints(self):
+        rng = np.random.default_rng(42)
+        data = _make_poisson_data(rng)
+        bw = MW_BANDWIDTH
+
+        # skchange
+        sk_det = MovingWindow(
+            change_score=CostChangeScore(PoissonCost()),
+            penalty=SKCHANGE_MW_PENALTY,
+            bandwidth=bw,
+        )
+        sk_det.fit(data)
+        sk_cps = sorted(sk_det.predict(data).tolist())
+
+        # ruptures
+        rpt_algo = rpt.Window(custom_cost=CostPoisson(), width=2 * bw, min_size=1, jump=1)
+        rpt_algo.fit(data)
+        rpt_cps = sorted(
+            _strip_endpoint(rpt_algo.predict(pen=RUPTURES_MW_PENALTY), len(data))
+        )
+
+        _assert_changepoints_close(
+            sk_cps,
+            POISSON_CHANGEPOINTS,
+            tolerance=TOLERANCE,
+            msg="skchange MovingWindow Poisson: ",
+        )
+        _assert_changepoints_close(
+            rpt_cps,
+            POISSON_CHANGEPOINTS,
+            tolerance=TOLERANCE,
+            msg="ruptures Window Poisson: ",
+        )
+
+
 class TestMovingWindowLinRegAgreement:
     """Moving-window linear regression scores agree on slope changes."""
 
@@ -664,6 +734,40 @@ class TestBinSegL1Agreement:
             expected_changepoints,
             tolerance=TOLERANCE,
             msg=f"ruptures Binseg L1 (p={n_columns}): ",
+        )
+
+
+class TestBinSegPoissonAgreement:
+    """Seeded binary segmentation + Poisson vs ruptures Binseg(custom_cost)."""
+
+    def test_both_find_known_changepoints(self):
+        rng = np.random.default_rng(42)
+        data = _make_poisson_data(rng)
+
+        sk_det = SeededBinarySegmentation(
+            change_score=CostChangeScore(PoissonCost()),
+            penalty=SKCHANGE_BINSEG_PENALTY,
+        )
+        sk_det.fit(data)
+        sk_cps = sorted(sk_det.predict(data).tolist())
+
+        rpt_algo = rpt.Binseg(custom_cost=CostPoisson(), min_size=1, jump=1)
+        rpt_algo.fit(data)
+        rpt_cps = sorted(
+            _strip_endpoint(rpt_algo.predict(pen=RUPTURES_BINSEG_PENALTY), len(data))
+        )
+
+        _assert_changepoints_close(
+            sk_cps,
+            POISSON_CHANGEPOINTS,
+            tolerance=TOLERANCE,
+            msg="skchange SeededBinSeg Poisson: ",
+        )
+        _assert_changepoints_close(
+            rpt_cps,
+            POISSON_CHANGEPOINTS,
+            tolerance=TOLERANCE,
+            msg="ruptures Binseg Poisson: ",
         )
 
 

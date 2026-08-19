@@ -23,6 +23,7 @@ from change_bench.benchmarks.comparison_pairs import (
     pair_binseg_l2_cusum,
     pair_binseg_linreg,
     pair_binseg_mv_gaussian,
+    pair_binseg_poisson,
     pair_binseg_rank,
     pair_fpop_l2,
     pair_moving_window_esac,
@@ -31,6 +32,7 @@ from change_bench.benchmarks.comparison_pairs import (
     pair_moving_window_l2,
     pair_moving_window_linreg,
     pair_moving_window_mv_gaussian,
+    pair_moving_window_poisson,
     pair_moving_window_rank,
     pair_pelt_1d_gaussian,
     pair_pelt_l1,
@@ -60,11 +62,13 @@ class Pair(StrEnum):
     MOVING_WINDOW_L2 = "moving_window_l2"
     MOVING_WINDOW_L1 = "moving_window_l1"
     MOVING_WINDOW_ESAC = "moving_window_esac"
+    MOVING_WINDOW_POISSON = "moving_window_poisson"
     MOVING_WINDOW_RANK = "moving_window_rank"
     MOVING_WINDOW_LINREG = "moving_window_linreg"
     BINSEG_L2_CUSUM = "binseg_l2_cusum"
     BINSEG_L1 = "binseg_l1"
     BINSEG_ESAC = "binseg_esac"
+    BINSEG_POISSON = "binseg_poisson"
     BINSEG_RANK = "binseg_rank"
     BINSEG_LINREG = "binseg_linreg"
     BINSEG_CONTINUOUS_LINEAR_TREND = "binseg_continuous_linear_trend"
@@ -117,11 +121,13 @@ BENCHMARK_PAIRS: dict[Pair, Callable[..., list[BenchmarkCase]]] = {
     Pair.MOVING_WINDOW_L2: pair_moving_window_l2,
     Pair.MOVING_WINDOW_L1: pair_moving_window_l1,
     Pair.MOVING_WINDOW_ESAC: pair_moving_window_esac,
+    Pair.MOVING_WINDOW_POISSON: pair_moving_window_poisson,
     Pair.MOVING_WINDOW_RANK: pair_moving_window_rank,
     Pair.MOVING_WINDOW_LINREG: pair_moving_window_linreg,
     Pair.BINSEG_L2_CUSUM: pair_binseg_l2_cusum,
     Pair.BINSEG_L1: pair_binseg_l1,
     Pair.BINSEG_ESAC: pair_binseg_esac,
+    Pair.BINSEG_POISSON: pair_binseg_poisson,
     Pair.BINSEG_RANK: pair_binseg_rank,
     Pair.BINSEG_LINREG: pair_binseg_linreg,
     Pair.BINSEG_CONTINUOUS_LINEAR_TREND: pair_binseg_continuous_linear_trend,
@@ -163,8 +169,10 @@ PAIR_CATEGORIES: dict[str, list[Pair]] = {
         Pair.PELT_POISSON,
         Pair.MOVING_WINDOW_L2,
         Pair.MOVING_WINDOW_L1,
+        Pair.MOVING_WINDOW_POISSON,
         Pair.BINSEG_L2_CUSUM,
         Pair.BINSEG_L1,
+        Pair.BINSEG_POISSON,
     ],
     "needs_min_segment_length": [
         Pair.PELT_1D_GAUSSIAN,
