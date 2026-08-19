@@ -49,9 +49,8 @@ followed by `scripts/paper_plotting/plot_cost_benchmark_figures.py`.
 targeting changes in the intensity of count data such as event, arrival, or
 defect counts. Ruptures has no built-in Poisson model, so we've implemented a
 custom ruptures `PoissonCost()` equivalent (a `BaseCost` subclass computing
-the same twice-negative log-likelihood) for its side of the comparison —
-showcasing how easily both libraries extend to new costs. Benchmarked on one
-feature:
+the same twice-negative log-likelihood) for its side of the comparison. 
+Benchmarked on one feature:
 
 ![Poisson cost benchmark](figures/paper/cost/poisson/cost-poisson.png)
 
