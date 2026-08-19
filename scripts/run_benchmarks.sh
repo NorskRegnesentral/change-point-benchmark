@@ -20,7 +20,7 @@ RUN_PLOTS=1
 BENCHMARKS=(
     scripts/paper_benchmarks/run_change_in_mean_benchmark.py
     scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py
-    scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py
+    scripts/paper_benchmarks/run_multivariate_cost_benchmark.py
     scripts/paper_benchmarks/run_rank_score_benchmark.py
 )
 
@@ -41,7 +41,7 @@ if [[ "$RUN_PLOTS" == "1" ]]; then
     PLOTS=(
         scripts/paper_plotting/plot_change_in_mean_benchmark.py
         scripts/paper_plotting/plot_l1_change_in_mean_benchmark.py
-        scripts/paper_plotting/plot_mv_dimension_benchmark.py
+        scripts/paper_plotting/plot_cost_benchmark_figures.py
         scripts/paper_plotting/plot_compact_score_benchmarks.py
     )
     for script in "${PLOTS[@]}"; do

@@ -25,6 +25,47 @@ runtime; values above 1 mean skchange is faster):
 Benchmarks were run on an Intel 10 Core Xeon Silver 4110 @ 2.10 GHz with 49 GiB RAM,
 Ubuntu 22.04.5 LTS.
 
+## Supplementary benchmarks
+
+Per-cost comparisons against ruptures on null data: absolute wall time
+(fit + predict) on the left, and the ruptures/skchange wall-time ratio on the
+right (values above 1 mean skchange is faster).
+
+### L1 cost
+
+`L1Cost` measures within-segment deviations from the segment median in
+absolute error. It is robust to outliers and heavy-tailed noise, making it a
+good choice for detecting signal jumps in noisy sensor data where a
+squared-error cost could overreact to spikes. Benchmarked on one feature:
+
+![L1 cost benchmark](figures/paper/cost/l1-change-in-mean/cost-l1-change-in-mean.png)
+
+Reproduce with `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py`
+followed by `scripts/paper_plotting/plot_cost_benchmark_figures.py`.
+
+### Rank cost
+
+`RankCost` is a nonparametric, multivariate cost based on the ranks of the
+observations within each feature. It is invariant to monotone transformations
+of the data and makes no distributional assumptions. Benchmarked on 20 features:
+
+![Rank cost benchmark](figures/paper/cost/rank-high-dim/cost-rank-high-dim.png)
+
+Reproduce with `scripts/paper_benchmarks/run_multivariate_cost_benchmark.py`
+followed by `scripts/paper_plotting/plot_cost_benchmark_figures.py`.
+
+### Multivariate Gaussian cost
+
+`MultivariateGaussianCost` is the Gaussian log-likelihood cost with
+segment-wise mean and full covariance, so it detects changes in both the mean
+and the correlation structure. It is useful for correlated multivariate
+signals:
+
+![Multivariate Gaussian cost benchmark](figures/paper/cost/mv-gaussian/cost-mv-gaussian.png)
+
+Reproduce with `scripts/paper_benchmarks/run_multivariate_cost_benchmark.py`
+followed by `scripts/paper_plotting/plot_cost_benchmark_figures.py`.
+
 ## Getting started
 
 Requires Python 3.12+ and the [uv](https://docs.astral.sh/uv/) package manager.
@@ -65,7 +106,7 @@ automatically after a run:
 | Compact score comparison (above) | `scripts/paper_benchmarks/run_change_in_mean_benchmark.py`, `scripts/paper_benchmarks/run_rank_score_benchmark.py` | `scripts/paper_plotting/plot_compact_score_benchmarks.py` |
 | Change-in-mean (L2) | `scripts/paper_benchmarks/run_change_in_mean_benchmark.py` | `scripts/paper_plotting/plot_change_in_mean_benchmark.py` |
 | Robust change-in-mean (L1) | `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py` | `scripts/paper_plotting/plot_l1_change_in_mean_benchmark.py` |
-| Multivariate dimension sweep | `scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py` | `scripts/paper_plotting/plot_mv_dimension_benchmark.py` |
+| Per-cost comparisons (L1, Rank, MV Gaussian) | `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py`, `scripts/paper_benchmarks/run_multivariate_cost_benchmark.py` | `scripts/paper_plotting/plot_cost_benchmark_figures.py` |
 
 
 ## Methodology
@@ -114,27 +155,3 @@ so users can confirm that all timings correspond to zero detections.
 Run `uv run bench --list` for the full, up-to-date list (including linear
 regression, linear trend, and ESAC pairs).
 
-## Supplementary benchmarks
-
-### Robust change-in-mean (L1 cost)
-
-Runtime for the L1 (robust) change-in-mean pairs across sample sizes:
-
-![Robust change-in-mean benchmark](figures/paper/robust-change-in-mean-benchmark.png)
-
-![Robust change-in-mean benchmark, relative](figures/paper/robust-change-in-mean-benchmark-relative.png)
-
-Reproduce with `scripts/paper_benchmarks/run_change_in_mean_l1_benchmark.py`
-followed by `scripts/paper_plotting/plot_l1_change_in_mean_benchmark.py`.
-
-### Multivariate change detection (dimension sweep)
-
-Runtime at a fixed number of samples with increasing data dimension, covering
-multivariate Gaussian, L2, rank, and ESAC-based detectors:
-
-![Multivariate dimension benchmark](figures/paper/mv-dimension-benchmark.png)
-
-![Multivariate dimension benchmark, relative](figures/paper/mv-dimension-benchmark-relative.png)
-
-Reproduce with `scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py`
-followed by `scripts/paper_plotting/plot_mv_dimension_benchmark.py`.

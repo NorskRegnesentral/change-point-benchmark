@@ -100,6 +100,7 @@ def run_benchmark(
     func: Callable,
     n_runs: int,
     penalty: float | None,
+    in_no_change_regime: bool = True,
 ) -> BenchmarkResult:
     """Run a single benchmark case *n_runs* times and return statistics.
 
@@ -142,6 +143,10 @@ def run_benchmark(
         Number of timed repetitions.
     penalty:
         Penalty configured for the benchmark comparison.
+    in_no_change_regime:
+        If True (the default), raise a ``RuntimeError`` when any change
+        points are detected: the benchmarks run on null data, and detections
+        mean the penalty is too low for a fair timing comparison.
     """
     result = BenchmarkResult(
         package=package,
@@ -177,6 +182,14 @@ def run_benchmark(
             changepoint for changepoint in changepoints if changepoint != n_samples
         ]
     result.n_detected_changepoints = len(changepoints)
+
+    if in_no_change_regime and result.n_detected_changepoints > 0:
+        raise RuntimeError(
+            f"[{package}] {cpd_algorithm} (name={name}, n={n_samples}, "
+            f"p={data_dimension}, penalty={penalty}) detected "
+            f"{result.n_detected_changepoints} change point(s) on null data; "
+            "increase the penalty or pass in_no_change_regime=False."
+        )
 
     return result
 

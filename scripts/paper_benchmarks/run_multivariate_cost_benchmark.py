@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-"""Run the fixed-sample multivariate dimension benchmark.
+"""Run the high-dimensional (p = 20) multivariate cost null benchmark.
 
-Compares valid combinations of PELT, moving window, and seeded binary
-segmentation with L2, ESAC, multivariate Gaussian, and rank scores/costs.
-ESAC cases are skchange-only. Run with::
+Sweeps n_samples at a fixed number of features for the multivariate
+Gaussian, ESAC, and rank costs with PELT, moving window, and seeded binary
+segmentation. ESAC cases are skchange-only. Run with::
 
-    uv run python scripts/paper_benchmarks/run_multivariate_dimension_benchmark.py
+    uv run python scripts/paper_benchmarks/run_multivariate_cost_benchmark.py
 
 Results are written to a file named like
-``results/multivariate-change-detection-benchmark_2026-08-10_skchange-0.9.0_ruptures-1.1.10.parquet``.
+``results/paper/multivariate-cost-benchmark_2026-08-19_skchange-0.17.0_ruptures-1.1.10.parquet``.
 Existing cases are skipped unless :data:`OVERRIDE_RESULTS` is enabled.
 """
 
@@ -31,31 +31,40 @@ from change_bench.runner import print_penalty_summary, run_benchmark
 # Configuration
 # ============================================================================
 PAIRS: list[Pair] = [
-    Pair.MOVING_WINDOW_L2,
-    Pair.MOVING_WINDOW_ESAC,
-    Pair.MOVING_WINDOW_RANK,
-    Pair.MOVING_WINDOW_MV_GAUSSIAN,
-    Pair.BINSEG_L2_CUSUM,
-    Pair.BINSEG_ESAC,
-    Pair.BINSEG_RANK,
-    Pair.BINSEG_MV_GAUSSIAN,
-    Pair.PELT_L2,
-    Pair.PELT_RANK,
     Pair.PELT_MV_GAUSSIAN,
+    Pair.MOVING_WINDOW_MV_GAUSSIAN,
+    Pair.BINSEG_MV_GAUSSIAN,
+    Pair.MOVING_WINDOW_ESAC,
+    Pair.BINSEG_ESAC,
+    Pair.PELT_RANK,
+    Pair.MOVING_WINDOW_RANK,
+    Pair.BINSEG_RANK,
 ]
-N_SAMPLES: int = 2000
-DIMENSIONS: list[int] = [5, 10, 25, 50, 75, 100]
+DIMENSIONS: list[int] = [20]
+N_SAMPLES: list[int] = [
+    100,
+    250,
+    500,
+    750,
+    1500,
+    # 2500,
+    # 5000,
+    # int(1.0e4),
+]
 MIN_SEGMENT_LENGTH: int = 1
 INCLUDE_FIT: bool = True
 DISTRIBUTIONS: list[str] = ["normal"]
-N_RUNS: int = 10
+
+# Each (threshold, n_runs) entry applies when n_samples <= threshold.
+RUNS_REGIME: list[tuple[int, int]] = []
+RUNS_DEFAULT: int = 5
 
 OVERRIDE_RESULTS: bool = False
 RUN_STARTED_ON = date.today()
 SKCHANGE_VERSION = version("skchange")
 RUPTURES_VERSION = version("ruptures")
 OUTPUT_PATH = prepare_results_path(
-    f"multivariate-change-detection-benchmark_{RUN_STARTED_ON.isoformat()}_"
+    f"multivariate-cost-benchmark_{RUN_STARTED_ON.isoformat()}_"
     f"skchange-{SKCHANGE_VERSION}_ruptures-{RUPTURES_VERSION}.parquet",
     Path(__file__),
     subdir=Path("paper"),
@@ -76,7 +85,15 @@ _CASE_KEY_COLS = [
 # ============================================================================
 # Helpers
 # ============================================================================
-def _case_key(case: BenchmarkCase) -> tuple:
+def _n_runs_for(n_samples: int) -> int:
+    """Look up the number of timed repetitions for a sample size."""
+    for threshold, n_runs in RUNS_REGIME:
+        if n_samples <= threshold:
+            return n_runs
+    return RUNS_DEFAULT
+
+
+def _case_key(case: BenchmarkCase, n_runs: int) -> tuple:
     """Return the columns that uniquely identify a completed case."""
     return (
         case.name,
@@ -85,7 +102,7 @@ def _case_key(case: BenchmarkCase) -> tuple:
         case.data_dimension,
         case.include_fit,
         case.min_segment_length,
-        N_RUNS,
+        n_runs,
         case.penalty,
     )
 
@@ -96,15 +113,14 @@ def _load_existing_keys(path: Path) -> set[tuple]:
         return set()
     if "penalty" not in pl.read_parquet_schema(path):
         return set()
-    frame = pl.read_parquet(path, columns=_CASE_KEY_COLS)
-    return set(frame.iter_rows())
+    return set(pl.read_parquet(path, columns=_CASE_KEY_COLS).iter_rows())
 
 
 def _collect_cases() -> list[BenchmarkCase]:
-    """Create the configured multivariate dimension benchmark cases."""
+    """Create the configured multivariate cost benchmark cases."""
     return collect_cases(
         pairs=PAIRS,
-        n_samples_list=[N_SAMPLES],
+        n_samples_list=N_SAMPLES,
         include_fit=INCLUDE_FIT,
         min_segment_length=MIN_SEGMENT_LENGTH,
         dimensions=DIMENSIONS,
@@ -125,24 +141,22 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
         else:
             existing_frame = None
 
-    results: list[dict] = []
+    output_frame = existing_frame
+    completed = 0
     skipped = 0
     started = time.perf_counter()
-
     for index, case in enumerate(cases, 1):
-        if _case_key(case) in existing_keys:
+        n_runs = _n_runs_for(case.n_samples)
+        if _case_key(case, n_runs) in existing_keys:
             skipped += 1
             continue
 
-        fit_label = "fit+predict" if case.include_fit else "predict"
         print(
             f"  ({index}/{len(cases)}) [{case.package}] {case.cpd_algorithm} "
-            f"(n={case.n_samples}, p={case.data_dimension}, {fit_label}, "
-            f"runs={N_RUNS}) ...",
+            f"(n={case.n_samples}, p={case.data_dimension}, runs={n_runs}) ...",
             end=" ",
             flush=True,
         )
-
         result = run_benchmark(
             package=case.package,
             cpd_algorithm=case.cpd_algorithm,
@@ -155,59 +169,47 @@ def _run_cases(cases: list[BenchmarkCase]) -> None:
             prepare=case.prepare,
             setup=case.setup,
             func=case.func,
-            n_runs=N_RUNS,
+            n_runs=n_runs,
             penalty=case.penalty,
         )
         print(
-            f"ski_jump={result.ski_jump_mean:.4f}s "
-            f"+- {result.ski_jump_std:.4f}s  min={result.min:.4f}s "
+            f"ski_jump={result.ski_jump_mean:.4f}s min={result.min:.4f}s "
             f"changes={result.n_detected_changepoints}"
         )
-        results.append(result.as_dict())
+        result_frame = pl.DataFrame([result.as_dict()])
+        output_frame = (
+            pl.concat([output_frame, result_frame], how="diagonal_relaxed")
+            if output_frame is not None
+            else result_frame
+        )
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        output_frame.write_parquet(OUTPUT_PATH)
+        completed += 1
 
-    elapsed = time.perf_counter() - started
     if skipped:
         print(f"  Skipped {skipped} already-completed case(s).")
-
-    if not results and existing_frame is None:
+    if completed == 0 and output_frame is None:
         print("No results were produced.")
         return
-
-    if results and existing_frame is not None:
-        output_frame = pl.concat(
-            [existing_frame, pl.DataFrame(results)], how="diagonal_relaxed"
-        )
-    elif existing_frame is not None:
-        output_frame = existing_frame
-    else:
-        output_frame = pl.DataFrame(results)
-
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    output_frame.write_parquet(OUTPUT_PATH)
-    print(f"Finished in {elapsed:.1f}s ({len(results)} new result(s)).")
+    elapsed = time.perf_counter() - started
+    print(f"Finished in {elapsed:.1f}s ({completed} new result(s)).")
     print(f"Results written to {OUTPUT_PATH}")
     print_penalty_summary(output_frame)
 
 
-# ============================================================================
-# Main
-# ============================================================================
 def main() -> None:
     warnings.filterwarnings("ignore")
     cases = _collect_cases()
-
     print("=" * 60)
-    print("Multivariate Change Detection Benchmark")
+    print("High-Dimensional Multivariate Cost Null Benchmark")
     print("=" * 60)
-    print(f"Pairs:       {[pair.value for pair in PAIRS]}")
-    print(f"N samples:   {N_SAMPLES}")
-    print(f"Dimensions:  {DIMENSIONS}")
-    print(f"Cases:       {len(cases)}")
-    print(f"Runs:        {N_RUNS}")
-    print(f"Output:      {OUTPUT_PATH}")
-    print(f"Override:    {OVERRIDE_RESULTS}")
+    print(f"Pairs:      {[pair.value for pair in PAIRS]}")
+    print(f"Dimensions: {DIMENSIONS}")
+    print(f"N samples:  {N_SAMPLES}")
+    print(f"Cases:      {len(cases)}")
+    print(f"Runs:       {RUNS_REGIME} (default={RUNS_DEFAULT})")
+    print(f"Output:     {OUTPUT_PATH}")
     print()
-
     _run_cases(cases)
 
 

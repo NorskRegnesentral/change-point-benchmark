@@ -39,6 +39,28 @@ PANELS = [
             "binseg": "binseg_l1",
         },
     ),
+    PanelSpec(
+        key="rank-high-dim",
+        title="RankCost, 20 features",
+        result_prefix="multivariate-cost-benchmark",
+        dimension=20,
+        algorithms={
+            "pelt": "pelt_rank",
+            "moving_window": "moving_window_rank",
+            "binseg": "binseg_rank",
+        },
+    ),
+    PanelSpec(
+        key="mv-gaussian",
+        title="MultivariateGaussianCost, 20 features",
+        result_prefix="multivariate-cost-benchmark",
+        dimension=20,
+        algorithms={
+            "pelt": "pelt_mv_gaussian",
+            "moving_window": "moving_window_mv_gaussian",
+            "binseg": "binseg_mv_gaussian",
+        },
+    ),
 ]
 
 
