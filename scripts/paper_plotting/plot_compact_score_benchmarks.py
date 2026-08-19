@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date
 from importlib.metadata import version
 from pathlib import Path
@@ -13,7 +12,14 @@ import polars as pl
 from plotly.subplots import make_subplots
 
 from change_bench.paths import find_repo_root
-from change_bench.plotting import relative_speed_frame
+from change_bench.plotting import (
+    PanelSpec,
+    add_absolute_traces,
+    add_relative_traces,
+    apply_compact_layout,
+    load_panel_frame,
+    write_figure,
+)
 
 PROJECT_DIR = find_repo_root(Path(__file__))
 # RESULTS_DIR = PROJECT_DIR / "results" / "paper" / "visualized_results"
@@ -22,37 +28,9 @@ FIGURES_DIR = PROJECT_DIR / "figures" / "paper" / "compact"
 FIGURE_DATE = date.today().isoformat()
 SKCHANGE_VERSION = version("skchange")
 RUPTURES_VERSION = version("ruptures")
-METRIC_COL = "ski_jump_mean_s"
 
 # Set to False to drop the "Skchange: PELT" line from the absolute figure.
 SHOW_SKCHANGE_PELT: bool = True
-
-PACKAGE_COLORS = {"skchange": "#1f77b4", "ruptures": "#ff7f0e"}
-PACKAGE_LABELS = {"skchange": "Skchange", "ruptures": "Ruptures"}
-PACKAGE_SEARCH_LABELS = {
-    ("skchange", "moving_window"): "MovingWindow",
-    ("ruptures", "moving_window"): "Window",
-    ("skchange", "binseg"): "Seeded Bin. Seg",
-    ("ruptures", "binseg"): "Binseg",
-}
-SEARCH_STYLES = {
-    "pelt": ("solid", "circle", "#2ca02c", "PELT"),
-    "fpop": ("dashdot", "triangle-up", "#d62728", "FPOP"),
-    "moving_window": ("dash", "square-open", "#9467bd", "Moving window"),
-    "binseg": ("dot", "diamond", "#8c564b", "Binary segmentation"),
-}
-# The triangle renders visually smaller than other symbols at equal size.
-MARKER_SIZES = {"fpop": 9}
-DEFAULT_MARKER_SIZE = 6
-
-
-@dataclass(frozen=True)
-class PanelSpec:
-    key: str
-    title: str
-    result_prefix: str
-    dimension: int
-    algorithms: dict[str, str]
 
 
 PANELS = [
@@ -102,28 +80,6 @@ def _latest_result(prefix: str) -> Path:
     return matches[-1]
 
 
-def load_panel_frame(panel: PanelSpec) -> pl.DataFrame:
-    """Load and validate the benchmark rows required by one panel."""
-    algorithms = set(panel.algorithms.values())
-    frame = (
-        pl.read_parquet(_latest_result(panel.result_prefix))
-        .filter(
-            pl.col("include_fit")
-            & (pl.col("data_dimension") == panel.dimension)
-            & pl.col("cpd_algorithm").is_in(algorithms)
-        )
-        .group_by("package", "cpd_algorithm", "data_dimension", "n_samples")
-        .agg(pl.col(METRIC_COL).min())
-    )
-    actual_algorithms = set(frame["cpd_algorithm"].to_list())
-    if actual_algorithms != algorithms:
-        missing = sorted(algorithms - actual_algorithms)
-        raise ValueError(f"{panel.title} is missing algorithms: {missing}")
-    if set(frame["package"].to_list()) != set(PACKAGE_COLORS):
-        raise ValueError(f"{panel.title} must contain skchange and ruptures rows")
-    return frame
-
-
 def build_absolute_figure(
     panel_frames: list[tuple[PanelSpec, pl.DataFrame]],
 ) -> go.Figure:
@@ -136,55 +92,12 @@ def build_absolute_figure(
         horizontal_spacing=0.04,
     )
     shown: set[str] = set()
+    skip = () if SHOW_SKCHANGE_PELT else (("skchange", "pelt"),)
     for column, (panel, frame) in enumerate(panel_frames, start=1):
-        for search, algorithm in panel.algorithms.items():
-            dash, symbol, _, search_label = SEARCH_STYLES[search]
-            for package, color in PACKAGE_COLORS.items():
-                skchange_pelt = package == "skchange" and search == "pelt"
-                if skchange_pelt and not SHOW_SKCHANGE_PELT:
-                    continue
-                line = frame.filter(
-                    (pl.col("cpd_algorithm") == algorithm)
-                    & (pl.col("package") == package)
-                ).sort("n_samples")
-                if line.is_empty():
-                    # Skchange-only algorithms (e.g. FPOP) have no ruptures rows.
-                    continue
-                package_search_label = PACKAGE_SEARCH_LABELS.get(
-                    (package, search), search_label
-                )
-                legend_name = f"{PACKAGE_LABELS[package]}: {package_search_label}"
-                figure.add_trace(
-                    go.Scatter(
-                        x=line["n_samples"],
-                        y=line[METRIC_COL],
-                        mode="lines+markers",
-                        name=legend_name,
-                        legendgroup=legend_name,
-                        showlegend=legend_name not in shown,
-                        line=dict(color=color, dash=dash, width=1.8),
-                        marker=dict(
-                            color=color,
-                            symbol=symbol,
-                            size=MARKER_SIZES.get(search, DEFAULT_MARKER_SIZE),
-                        ),
-                        hovertemplate=(
-                            f"{legend_name}<br>Number of samples=%{{x}}"
-                            "<br>Wall time=%{y:.3g} s"
-                            "<extra></extra>"
-                        ),
-                    ),
-                    row=1,
-                    col=column,
-                )
-                shown.add(legend_name)
-        figure.update_xaxes(
-            type="log", title_text="Number of samples", row=1, col=column
-        )
-        figure.update_yaxes(type="log", showticklabels=True, row=1, col=column)
+        add_absolute_traces(figure, panel, frame, column, shown, skip=skip)
 
     figure.update_yaxes(title_text="Wall time (s)", row=1, col=1)
-    _apply_compact_layout(figure, len(panel_frames))
+    apply_compact_layout(figure, len(panel_frames))
     return figure
 
 
@@ -201,97 +114,32 @@ def build_relative_figure(
     )
     shown: set[str] = set()
     for column, (panel, frame) in enumerate(panel_frames, start=1):
-        ratios = relative_speed_frame(
-            frame,
-            ["cpd_algorithm", "data_dimension", "n_samples"],
-            METRIC_COL,
-        )
-        for search, algorithm in panel.algorithms.items():
-            dash, symbol, color, search_label = SEARCH_STYLES[search]
-            line = ratios.filter(pl.col("cpd_algorithm") == algorithm).sort("n_samples")
-            if line.is_empty():
-                # Skchange-only algorithms (e.g. FPOP) have no ruptures ratio.
-                continue
-            figure.add_trace(
-                go.Scatter(
-                    x=line["n_samples"],
-                    y=line["relative_speed"],
-                    mode="lines+markers",
-                    name=search_label,
-                    legendgroup=search,
-                    showlegend=search not in shown,
-                    line=dict(color=color, dash=dash, width=1.8),
-                    marker=dict(
-                        color=color,
-                        symbol=symbol,
-                        size=MARKER_SIZES.get(search, DEFAULT_MARKER_SIZE),
-                    ),
-                    hovertemplate=(
-                        f"{search_label}<br>n=%{{x}}<br>Ruptures/Skchange=%{{y:.2f}}x"
-                        "<extra></extra>"
-                    ),
-                ),
-                row=1,
-                col=column,
-            )
-            shown.add(search)
-        figure.update_xaxes(
-            type="log", title_text="Number of samples", row=1, col=column
-        )
-        figure.update_yaxes(type="log", showticklabels=True, row=1, col=column)
+        add_relative_traces(figure, panel, frame, column, shown)
 
     figure.add_hline(y=1, line=dict(color="#666666", dash="dash", width=1))
     figure.update_yaxes(title_text="Wall-time ratio", row=1, col=1)
-    _apply_compact_layout(figure, len(panel_frames))
+    apply_compact_layout(figure, len(panel_frames))
     return figure
-
-
-def _apply_compact_layout(figure: go.Figure, n_panels: int) -> None:
-    width = 420 if n_panels == 1 else 1080
-    figure.update_layout(
-        width=width,
-        height=340,
-        template="plotly_white",
-        font=dict(size=11),
-        margin=dict(l=58, r=18, t=42, b=88),
-        legend=dict(
-            orientation="h",
-            x=0.5,
-            xanchor="center",
-            y=-0.25,
-            yanchor="top",
-            font=dict(size=10),
-            itemwidth=30,
-        ),
-    )
-    figure.update_annotations(font=dict(size=11))
-
-
-def _write_figure(figure: go.Figure, stem: str) -> None:
-    html_path = FIGURES_DIR / f"{stem}-{FIGURE_DATE}.html"
-    pdf_path = html_path.with_suffix(".pdf")
-    # Stable-named PNG so README image links never go stale.
-    png_path = FIGURES_DIR / f"{stem}.png"
-    figure.write_html(html_path, include_plotlyjs="cdn")
-    figure.write_image(pdf_path)
-    figure.write_image(png_path, scale=2)
-    print(f"Figure written to {html_path}, {pdf_path} and {png_path}")
 
 
 def main() -> None:
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    panel_frames = [(panel, load_panel_frame(panel)) for panel in PANELS]
+    panel_frames = [
+        (panel, load_panel_frame(panel, _latest_result(panel.result_prefix)))
+        for panel in PANELS
+    ]
 
-    # for panel, frame in panel_frames:
-    #     _write_figure(build_absolute_figure([(panel, frame)]), f"compact-{panel.key}")
-    #     _write_figure(
-    #         build_relative_figure([(panel, frame)]),
-    #         f"compact-{panel.key}-relative",
-    #   )
-
-    _write_figure(build_absolute_figure(panel_frames), "compact-score-benchmarks")
-    _write_figure(
-        build_relative_figure(panel_frames), "compact-score-benchmarks-relative"
+    write_figure(
+        build_absolute_figure(panel_frames),
+        FIGURES_DIR,
+        "compact-score-benchmarks",
+        FIGURE_DATE,
+    )
+    write_figure(
+        build_relative_figure(panel_frames),
+        FIGURES_DIR,
+        "compact-score-benchmarks-relative",
+        FIGURE_DATE,
     )
 
 
